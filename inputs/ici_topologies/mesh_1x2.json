@@ -1,0 +1,38 @@
+[
+    {
+        "ep1": {
+            "type": "chiplet",
+            "outer_id": 1,
+            "inner_id": 3
+        },
+        "ep2": {
+            "type": "chiplet",
+            "outer_id": 0,
+            "inner_id": 1
+        }
+    },
+    {
+        "ep1": {
+            "type": "chiplet",
+            "outer_id": 2,
+            "inner_id": 0
+        },
+        "ep2": {
+            "type": "chiplet",
+            "outer_id": 0,
+            "inner_id": 3
+        }
+    },
+    {
+        "ep1": {
+            "type": "chiplet",
+            "outer_id": 3,
+            "inner_id": 0
+        },
+        "ep2": {
+            "type": "chiplet",
+            "outer_id": 1,
+            "inner_id": 1
+        }
+    }
+]

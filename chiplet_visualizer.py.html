@@ -1,0 +1,70 @@
+<html>
+<head>
+<title>chiplet_visualizer.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6a8759;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+chiplet_visualizer.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">sys</span>
+<span class="s2">import </span><span class="s1">argparse</span>
+<span class="s2">import </span><span class="s1">matplotlib.pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+<span class="s2">import </span><span class="s1">matplotlib.patches </span><span class="s2">as </span><span class="s1">ptch</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+
+<span class="s0"># Chiplet colors</span>
+<span class="s1">chiplet_colors = {</span><span class="s3">&quot;compute&quot; </span><span class="s1">: </span><span class="s3">&quot;#66aadd&quot;</span><span class="s2">, </span><span class="s3">&quot;memory&quot; </span><span class="s1">: </span><span class="s3">&quot;#66ddaa&quot;</span><span class="s2">, </span><span class="s3">&quot;io&quot; </span><span class="s1">: </span><span class="s3">&quot;#ddaa66&quot;</span><span class="s1">}</span>
+
+<span class="s0"># Visualize a single chiplet</span>
+<span class="s2">def </span><span class="s1">visualize_chiplet(chiplet_name</span><span class="s2">, </span><span class="s1">chiplet):</span>
+	<span class="s0"># Initialize the plot</span>
+	<span class="s1">fix</span><span class="s2">, </span><span class="s1">ax = plt.subplots()</span>
+	<span class="s1">ax.set_xlim(</span><span class="s4">0</span><span class="s2">,</span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">])</span>
+	<span class="s1">ax.set_ylim(</span><span class="s4">0</span><span class="s2">,</span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">])</span>
+	<span class="s1">plt.axis(</span><span class="s3">&quot;off&quot;</span><span class="s1">)</span>
+	<span class="s1">plt.axis(</span><span class="s3">'equal'</span><span class="s1">)</span>
+	<span class="s0"># Draw chiplet</span>
+	<span class="s1">ax.add_patch(ptch.Rectangle((</span><span class="s4">0</span><span class="s2">,</span><span class="s4">0</span><span class="s1">)</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">edgecolor = </span><span class="s3">&quot;#000000&quot;</span><span class="s2">, </span><span class="s1">facecolor = chiplet_colors[chiplet[</span><span class="s3">&quot;type&quot;</span><span class="s1">]]))</span>
+	<span class="s0"># Draw PHYs</span>
+	<span class="s1">radius = max(chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) / </span><span class="s4">15</span>
+	<span class="s1">fontsize = min(chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) * </span><span class="s4">2</span>
+	<span class="s2">for </span><span class="s1">(pid</span><span class="s2">, </span><span class="s1">phy) </span><span class="s2">in </span><span class="s1">enumerate(chiplet[</span><span class="s3">&quot;phys&quot;</span><span class="s1">]):</span>
+		<span class="s1">ax.add_patch(ptch.Circle((phy[</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">phy[</span><span class="s3">&quot;y&quot;</span><span class="s1">])</span><span class="s2">, </span><span class="s1">radius = radius</span><span class="s2">, </span><span class="s1">edgecolor = </span><span class="s3">&quot;#000000&quot;</span><span class="s2">, </span><span class="s1">facecolor = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">))</span>
+		<span class="s1">ax.text(phy[</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">phy[</span><span class="s3">&quot;y&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">str(pid)</span><span class="s2">, </span><span class="s1">ha = </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">va = </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#FFFFFF&quot;</span><span class="s2">, </span><span class="s1">fontsize = fontsize)</span>
+	<span class="s0"># Save plot</span>
+	<span class="s1">plt.savefig(</span><span class="s3">&quot;visualizations/chiplet_%s.pdf&quot; </span><span class="s1">% chiplet_name)</span>
+
+
+<span class="s2">if </span><span class="s1">__name__ == </span><span class="s3">&quot;__main__&quot;</span><span class="s1">:</span>
+	<span class="s0"># Read command line arguments</span>
+	<span class="s1">parser = argparse.ArgumentParser()</span>
+	<span class="s1">parser.add_argument(</span><span class="s3">&quot;-cf&quot;</span><span class="s2">, </span><span class="s3">&quot;--chiplet_ file&quot;</span><span class="s2">, </span><span class="s1">required = </span><span class="s2">True, </span><span class="s1">help = </span><span class="s3">&quot;Path to the </span><span class="s2">\&quot;</span><span class="s3">chiplets</span><span class="s2">\&quot; </span><span class="s3">input file&quot;</span><span class="s1">)</span>
+	<span class="s1">parser.add_argument(</span><span class="s3">&quot;-cn&quot;</span><span class="s2">, </span><span class="s3">&quot;--chiplet_name&quot;</span><span class="s2">, </span><span class="s1">required = </span><span class="s2">True, </span><span class="s1">help = </span><span class="s3">&quot;Name of the chiplet to visualize&quot;</span><span class="s1">)</span>
+	<span class="s1">args = parser.parse_args()</span>
+	<span class="s0"># Read the chiplet file</span>
+	<span class="s1">filename = args.chiplet_file</span>
+	<span class="s1">print(filename)</span>
+	<span class="s1">chiplets = hlp.read_file(filename = args.chiplet_file)</span>
+	<span class="s0"># Visualize the chiplet</span>
+	<span class="s2">if </span><span class="s1">args.chiplet_name </span><span class="s2">in </span><span class="s1">chiplets:</span>
+		<span class="s1">visualize_chiplet(chiplet_name = args.chiplet_name</span><span class="s2">, </span><span class="s1">chiplet = chiplets[args.chiplet_name])</span>
+	<span class="s2">else</span><span class="s1">:</span>
+		<span class="s1">print(</span><span class="s3">&quot;error: The chiplet </span><span class="s2">\&quot;</span><span class="s3">%s</span><span class="s2">\&quot; </span><span class="s3">was not found in the chiplet file </span><span class="s2">\&quot;</span><span class="s3">%s</span><span class="s2">\&quot;</span><span class="s3">.&quot; </span><span class="s1">% (args.chiplet_name</span><span class="s2">, </span><span class="s1">args.chiplet_file))</span>
+		<span class="s1">sys.exit()</span>
+
+</pre>
+</body>
+</html>

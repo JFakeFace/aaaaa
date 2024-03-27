@@ -1,0 +1,312 @@
+<html>
+<head>
+<title>run_booksim_simulation.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6a8759;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+run_booksim_simulation.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">sys</span>
+<span class="s2">import </span><span class="s1">math</span>
+<span class="s2">import </span><span class="s1">copy</span>
+<span class="s2">import </span><span class="s1">argparse</span>
+<span class="s2">import </span><span class="s1">subprocess</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+<span class="s2">import </span><span class="s1">validation </span><span class="s2">as </span><span class="s1">vld</span>
+<span class="s2">import </span><span class="s1">rapid_chiplet </span><span class="s2">as </span><span class="s1">rc</span>
+
+<span class="s2">def </span><span class="s1">check_units_for_trace_simulations(placement</span><span class="s2">, </span><span class="s1">chiplets):</span>
+	<span class="s0"># Compute the number of units per chiplet-type</span>
+	<span class="s1">unit_counts = {</span><span class="s3">&quot;compute&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;memory&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;io&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s2">for </span><span class="s1">chiplet_desc </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]:</span>
+		<span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s3">&quot;name&quot;</span><span class="s1">]]</span>
+		<span class="s1">unit_counts[chiplet[</span><span class="s3">&quot;type&quot;</span><span class="s1">]] += chiplet[</span><span class="s3">&quot;unit_count&quot;</span><span class="s1">]</span>
+	<span class="s0"># Check that unit-count is below threshold</span>
+	<span class="s1">valid = </span><span class="s2">True</span>
+	<span class="s2">for </span><span class="s1">typ </span><span class="s2">in </span><span class="s1">unit_counts:</span>
+		<span class="s2">if </span><span class="s1">unit_counts[typ] &gt; </span><span class="s4">64</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s3">&quot;error: BookSim simulations with traffic traces only support up to 64 %s-chiplets. &quot; </span><span class="s1">% typ + \</span>
+				  <span class="s3">&quot;Your design contains %s %s-chiplet&quot; </span><span class="s1">% (unit_counts[typ]</span><span class="s2">, </span><span class="s1">typ))</span>
+			<span class="s1">valid = </span><span class="s2">False</span>
+		<span class="s2">return </span><span class="s1">valid</span>
+
+<span class="s2">def </span><span class="s1">write_topology_anynet(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">link_lengths_internal</span><span class="s2">, </span><span class="s1">path):</span>
+	<span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type) = ici_graph</span>
+	<span class="s0"># Construct the topology.anynet file that BookSim takes as an input</span>
+	<span class="s0"># We first need to list all compute-chiplets, then all memory-chiplets and then all IO-chiplets</span>
+	<span class="s0"># and ids need to be consecutive, i.e. we need to remap chiplet ids.</span>
+	<span class="s1">cid_map = {}</span>
+	<span class="s2">for </span><span class="s1">typ </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;compute&quot;</span><span class="s2">,</span><span class="s3">&quot;memory&quot;</span><span class="s2">,</span><span class="s3">&quot;io&quot;</span><span class="s1">]:</span>
+		<span class="s2">for </span><span class="s1">(cid</span><span class="s2">, </span><span class="s1">chiplet_desc) </span><span class="s2">in </span><span class="s1">enumerate(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]):</span>
+			<span class="s2">if </span><span class="s1">chiplets[chiplet_desc[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == typ:</span>
+				<span class="s1">cid_map[cid] = len(cid_map)</span>
+	<span class="s0"># Add chiplets: One central routers plus one node for each unit (core, memory-bank, memory-controller)</span>
+	<span class="s1">anynet_lines = []</span>
+	<span class="s1">next_node_id = </span><span class="s4">0</span>
+	<span class="s0"># Again, first list compute-chiplets, then memory, then IO</span>
+	<span class="s2">for </span><span class="s1">typ </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;compute&quot;</span><span class="s2">,</span><span class="s3">&quot;memory&quot;</span><span class="s2">,</span><span class="s3">&quot;io&quot;</span><span class="s1">]:</span>
+		<span class="s2">for </span><span class="s1">(cid1</span><span class="s2">, </span><span class="s1">chiplet_desc) </span><span class="s2">in </span><span class="s1">enumerate(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]):</span>
+			<span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s3">&quot;name&quot;</span><span class="s1">]]</span>
+			<span class="s2">if </span><span class="s1">chiplet[</span><span class="s3">&quot;type&quot;</span><span class="s1">] == typ:</span>
+				<span class="s1">units = chiplet[</span><span class="s3">&quot;unit_count&quot;</span><span class="s1">]</span>
+				<span class="s0"># 1) list nodes with consecutive ids</span>
+				<span class="s1">bs_links = [(</span><span class="s3">&quot;node %d&quot; </span><span class="s1">% (next_node_id + i)) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(units)]</span>
+				<span class="s1">next_node_id += units</span>
+				<span class="s0"># 2) list other chiplets</span>
+				<span class="s2">for </span><span class="s1">cid2 </span><span class="s2">in </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">neighbors[cid1] </span><span class="s2">if </span><span class="s1">x &lt; c]:</span>
+					<span class="s1">link_lat = packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s3">&quot;constant&quot; </span><span class="s2">else </span><span class="s1">int(math.ceil(eval(packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">])(link_lengths_internal[(cid1</span><span class="s2">,</span><span class="s1">cid2)])))</span>
+					<span class="s1">lat = </span><span class="s4">2 </span><span class="s1">* technology[chiplet[</span><span class="s3">&quot;technology&quot;</span><span class="s1">]][</span><span class="s3">&quot;phy_latency&quot;</span><span class="s1">] + link_lat</span>
+					<span class="s1">bs_links.append((</span><span class="s3">&quot;router %d %d&quot; </span><span class="s1">% (cid_map[cid2]</span><span class="s2">, </span><span class="s1">lat)))</span>
+				<span class="s0"># 3) list interposer-routers    </span>
+				<span class="s2">for </span><span class="s1">rid </span><span class="s2">in </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">neighbors[cid1] </span><span class="s2">if </span><span class="s1">x &gt;= c]:</span>
+					<span class="s1">link_lat = packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s3">&quot;constant&quot; </span><span class="s2">else </span><span class="s1">int(math.ceil(eval(packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">])(link_lengths_internal[(cid1</span><span class="s2">,</span><span class="s1">rid)])))</span>
+					<span class="s1">lat = technology[chiplet[</span><span class="s3">&quot;technology&quot;</span><span class="s1">]][</span><span class="s3">&quot;phy_latency&quot;</span><span class="s1">] + link_lat</span>
+					<span class="s1">bs_links.append((</span><span class="s3">&quot;router %d %d&quot; </span><span class="s1">% (rid</span><span class="s2">, </span><span class="s1">lat)))</span>
+				<span class="s0"># Add the corresponding line to the anynet-file.</span>
+				<span class="s1">anynet_lines.append((</span><span class="s3">&quot;router %d &quot; </span><span class="s1">% cid_map[cid1]) + </span><span class="s3">&quot; &quot;</span><span class="s1">.join(bs_links))</span>
+	<span class="s0"># Add interposer-routers: Keep order as in the input file</span>
+	<span class="s2">for </span><span class="s1">rid1 </span><span class="s2">in </span><span class="s1">range(c</span><span class="s2">, </span><span class="s1">n):</span>
+		<span class="s1">bs_links = []</span>
+		<span class="s0"># 1) list other chiplets</span>
+		<span class="s2">for </span><span class="s1">cid </span><span class="s2">in </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">neighbors[rid1] </span><span class="s2">if </span><span class="s1">x &lt; c]:</span>
+			<span class="s1">link_lat = packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s3">&quot;constant&quot; </span><span class="s2">else </span><span class="s1">int(math.ceil(eval(packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">])(link_lengths_internal[(rid1</span><span class="s2">,</span><span class="s1">cid)])))</span>
+			<span class="s1">lat = technology[chiplet[</span><span class="s3">&quot;technology&quot;</span><span class="s1">]][</span><span class="s3">&quot;phy_latency&quot;</span><span class="s1">] + link_lat</span>
+			<span class="s1">bs_links.append((</span><span class="s3">&quot;router %d %d&quot; </span><span class="s1">% (cid_map[cid]</span><span class="s2">, </span><span class="s1">lat)))</span>
+		<span class="s0"># 3) list interposer-routers    </span>
+		<span class="s0"># The link traverses no PHY and it has once cycle latency itself</span>
+		<span class="s2">for </span><span class="s1">rid2 </span><span class="s2">in </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">neighbors[rid1] </span><span class="s2">if </span><span class="s1">x &gt;= c]:</span>
+			<span class="s1">link_lat = packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s3">&quot;constant&quot; </span><span class="s2">else </span><span class="s1">int(math.ceil(eval(packaging[</span><span class="s3">&quot;link_latency&quot;</span><span class="s1">])(link_lengths_internal[(rid1</span><span class="s2">,</span><span class="s1">rid2)])))</span>
+			<span class="s1">lat = link_lat</span>
+			<span class="s1">bs_links.append((</span><span class="s3">&quot;router %d %d&quot; </span><span class="s1">% (rid2</span><span class="s2">, </span><span class="s1">lat)))</span>
+		<span class="s0"># Add the corresponding line to the anynet-file.</span>
+		<span class="s1">anynet_lines.append((</span><span class="s3">&quot;router %d &quot; </span><span class="s1">% rid1) + </span><span class="s3">&quot; &quot;</span><span class="s1">.join(bs_links))</span>
+	<span class="s0"># Store the file</span>
+	<span class="s2">with </span><span class="s1">open(path</span><span class="s2">, </span><span class="s3">&quot;w&quot;</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+		<span class="s2">for </span><span class="s1">line </span><span class="s2">in </span><span class="s1">anynet_lines:</span>
+			<span class="s1">file.write(line + </span><span class="s3">&quot;</span><span class="s2">\n</span><span class="s3">&quot;</span><span class="s1">)</span>
+
+<span class="s2">def </span><span class="s1">write_booksim_config(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">topology_path</span><span class="s2">, </span><span class="s1">load</span><span class="s2">, </span><span class="s1">path):</span>
+	<span class="s0"># Determine router latency for BookSim </span>
+	<span class="s2">if </span><span class="s3">&quot;router_latency&quot; </span><span class="s2">in </span><span class="s1">booksim_config:</span>
+		<span class="s1">router_latency = booksim_config[</span><span class="s3">&quot;router_latency&quot;</span><span class="s1">]</span>
+	<span class="s2">else</span><span class="s1">:</span>
+		<span class="s1">relay_latencies = [chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;internal_latency&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]]</span>
+		<span class="s1">phy_latencies = [technology[chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;technology&quot;</span><span class="s1">]][</span><span class="s3">&quot;phy_latency&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]]</span>
+		<span class="s1">irouter_latency = (packaging[</span><span class="s3">&quot;latency_irouter&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;is_active&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s4">0</span><span class="s1">)</span>
+		<span class="s1">all_router_latencies = relay_latencies + ([irouter_latency] * len(placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">]))</span>
+		<span class="s2">if </span><span class="s1">len(set(all_router_latencies)) &gt; </span><span class="s4">1</span><span class="s1">:</span>
+			<span class="s1">router_latency = int(round(sum(all_router_latencies) / len(all_router_latencies)))</span>
+			<span class="s1">print(</span><span class="s3">&quot;warning: In BookSim simulations, all routers (on-chip or on-interposer) have the same latency. &quot; </span><span class="s1">+ \</span>
+				  <span class="s3">&quot;In your configuration, these latencies are not identical. RapidChiplet will use the average &quot; </span><span class="s1">+ \</span>
+				  <span class="s3">&quot;latency which is %d cycles. To manually set the router-latency, &quot; </span><span class="s1">% router_latency + \</span>
+				  <span class="s3">&quot;specify the parameter </span><span class="s2">\&quot;</span><span class="s3">router_latency</span><span class="s2">\&quot; </span><span class="s3">in the booksim-config input file.&quot;</span><span class="s1">)</span>
+		<span class="s2">else</span><span class="s1">:</span>
+			<span class="s1">router_latency = all_router_latencies[</span><span class="s4">0</span><span class="s1">]</span>
+	<span class="s0"># Decide whether all chiplets of a given type can relay traffic or not</span>
+	<span class="s1">can_relay = {}</span>
+	<span class="s2">for </span><span class="s1">typ </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;compute&quot;</span><span class="s2">,</span><span class="s3">&quot;memory&quot;</span><span class="s2">,</span><span class="s3">&quot;io&quot;</span><span class="s1">]:</span>
+		<span class="s1">relay_values = [chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;relay&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == typ]</span>
+		<span class="s2">if </span><span class="s1">len(set(relay_values)) &gt; </span><span class="s4">1</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s3">&quot;warning: In BookSim simulations, all chiplets of a given type (compute, memory, or io) &quot; </span><span class="s1">+ \</span>
+				  <span class="s3">&quot;have the same relay behaviour, i.e., either all of them can relay traffic or none of them can. &quot; </span><span class="s1">+ \</span>
+				  <span class="s3">&quot;In your configuration, some %s-chiplets can relay traffic and some cannot. &quot; </span><span class="s1">% typ + \</span>
+				  <span class="s3">&quot;RapidChiplet will set the relay capability to True for all %s-chiplets&quot; </span><span class="s1">% typ)</span>
+			<span class="s1">can_relay[typ] = </span><span class="s2">True</span>
+		<span class="s2">else</span><span class="s1">:</span>
+			<span class="s1">can_relay[typ] = relay_values[</span><span class="s4">0</span><span class="s1">]</span>
+		
+	<span class="s0"># Take the booksim config file for RapidChiplet as basis of the one for BookSim2</span>
+	<span class="s1">booksim_config_file = copy.deepcopy(booksim_config)</span>
+	<span class="s0"># Extract parameters needed in this function</span>
+	<span class="s1">traffic_mode = booksim_config[</span><span class="s3">&quot;traffic_mode&quot;</span><span class="s1">]</span>
+	<span class="s1">trace_mode = booksim_config[</span><span class="s3">&quot;trace_mode&quot;</span><span class="s1">]</span>
+	<span class="s1">traffic = booksim_config[</span><span class="s3">&quot;traffic&quot;</span><span class="s1">]</span>
+	<span class="s0"># Remove parameters that were intended for RapidChiplet and not for BookSim2</span>
+	<span class="s2">if </span><span class="s3">&quot;router_latency&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;router_latency&quot;</span><span class="s1">]</span>
+	<span class="s2">if </span><span class="s3">&quot;traffic_mode&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;traffic_mode&quot;</span><span class="s1">]</span>
+	<span class="s2">if </span><span class="s3">&quot;trace_mode&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;trace_mode&quot;</span><span class="s1">]</span>
+	<span class="s2">if </span><span class="s3">&quot;precision&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;precision&quot;</span><span class="s1">]</span>
+	<span class="s2">if </span><span class="s3">&quot;saturation_factor&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;saturation_factor&quot;</span><span class="s1">]</span>
+	<span class="s0"># Only keep the trace line if the traffic mode is set to trace</span>
+	<span class="s2">if </span><span class="s3">&quot;trace&quot; </span><span class="s2">in </span><span class="s1">booksim_config_file </span><span class="s2">and </span><span class="s1">traffic_mode != </span><span class="s3">&quot;trace&quot;</span><span class="s1">:</span>
+		<span class="s2">del </span><span class="s1">booksim_config_file[</span><span class="s3">&quot;trace&quot;</span><span class="s1">]</span>
+
+	<span class="s0"># Add parameters for BookSim2 that were not in the RapidChiplet booksim config file</span>
+	<span class="s0"># 1) Simulation parameters</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;topology&quot;</span><span class="s1">] = </span><span class="s3">&quot;anynet&quot; </span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;network_file&quot;</span><span class="s1">] = topology_path</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;injection_rate&quot;</span><span class="s1">] = (</span><span class="s4">1.0 </span><span class="s2">if </span><span class="s1">traffic_mode == </span><span class="s3">&quot;trace&quot; </span><span class="s2">else </span><span class="s1">load)</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;netrace_cycles&quot;</span><span class="s1">] = (</span><span class="s4">0 </span><span class="s2">if </span><span class="s1">trace_mode == </span><span class="s3">&quot;idealized&quot; </span><span class="s2">else </span><span class="s4">1</span><span class="s1">)</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;injection_process&quot;</span><span class="s1">] = (</span><span class="s3">&quot;custom&quot; </span><span class="s2">if </span><span class="s1">traffic </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;C2C&quot;</span><span class="s2">,</span><span class="s3">&quot;C2M&quot;</span><span class="s2">,</span><span class="s3">&quot;C2I&quot;</span><span class="s2">,</span><span class="s3">&quot;M2I&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s3">&quot;bernoulli&quot;</span><span class="s1">)</span>
+	<span class="s0"># 2) Parameters that we added to BookSim for integration into RapidChiplet: Differentiate between chiplet types</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_comp&quot;</span><span class="s1">] = len([x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;compute&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_mem&quot;</span><span class="s1">] = len([x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;memory&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_io&quot;</span><span class="s1">] = len([x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;io&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_comp_units&quot;</span><span class="s1">] = sum([chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;unit_count&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;compute&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_mem_units&quot;</span><span class="s1">] = sum([chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;unit_count&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;memory&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;n_io_units&quot;</span><span class="s1">] = sum([chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;unit_count&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">chiplets[x[</span><span class="s3">&quot;name&quot;</span><span class="s1">]][</span><span class="s3">&quot;type&quot;</span><span class="s1">] == </span><span class="s3">&quot;io&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;r_comp&quot;</span><span class="s1">] = </span><span class="s4">1 </span><span class="s2">if </span><span class="s1">can_relay[</span><span class="s3">&quot;compute&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s4">0</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;r_mem&quot;</span><span class="s1">] = </span><span class="s4">1 </span><span class="s2">if </span><span class="s1">can_relay[</span><span class="s3">&quot;memory&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s4">0</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;r_io&quot;</span><span class="s1">] = </span><span class="s4">1 </span><span class="s2">if </span><span class="s1">can_relay[</span><span class="s3">&quot;io&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s4">0</span>
+	<span class="s0"># 3) Parameters related to the timing/latencies:</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;credit_delay &quot;</span><span class="s1">] = </span><span class="s4">0</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;routing_delay &quot;</span><span class="s1">] = </span><span class="s4">0</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;vc_alloc_delay &quot;</span><span class="s1">] = </span><span class="s4">1</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;sw_alloc_delay &quot;</span><span class="s1">] = </span><span class="s4">1</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;st_final_delay &quot;</span><span class="s1">] = max(</span><span class="s4">1</span><span class="s2">, </span><span class="s1">router_latency - </span><span class="s4">2</span><span class="s1">)</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;input_speedup &quot;</span><span class="s1">] = </span><span class="s4">1</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;output_speedup &quot;</span><span class="s1">] = </span><span class="s4">1</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;internal_speedup &quot;</span><span class="s1">] = (</span><span class="s4">1.0 </span><span class="s2">if </span><span class="s1">router_latency &gt;= </span><span class="s4">3 </span><span class="s2">else </span><span class="s1">(</span><span class="s4">3.0 </span><span class="s1">/ router_latency))</span>
+	<span class="s0"># 4) More simulation parameters</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;use_read_write &quot;</span><span class="s1">] = </span><span class="s4">0</span>
+	<span class="s1">booksim_config_file[</span><span class="s3">&quot;latency_thres&quot;</span><span class="s1">] = (str(</span><span class="s4">1000000000000.0</span><span class="s1">) </span><span class="s2">if </span><span class="s1">traffic_mode == </span><span class="s3">&quot;trace&quot; </span><span class="s2">else </span><span class="s1">str(</span><span class="s4">10000.0</span><span class="s1">))</span>
+	<span class="s0"># Convert config to file format</span>
+	<span class="s1">config_lines = [(key + </span><span class="s3">&quot; = &quot; </span><span class="s1">+ str(booksim_config_file[key]) + </span><span class="s3">&quot;;&quot;</span><span class="s1">) </span><span class="s2">for </span><span class="s1">key </span><span class="s2">in </span><span class="s1">booksim_config_file]</span>
+	<span class="s0"># Store the file</span>
+	<span class="s2">with </span><span class="s1">open(path</span><span class="s2">, </span><span class="s3">&quot;w&quot;</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+		<span class="s2">for </span><span class="s1">line </span><span class="s2">in </span><span class="s1">config_lines:</span>
+			<span class="s1">file.write(line + </span><span class="s3">&quot;</span><span class="s2">\n</span><span class="s3">&quot;</span><span class="s1">)</span>
+
+<span class="s2">def </span><span class="s1">run_booksim_simulation_sub(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">topology_path</span><span class="s2">, </span><span class="s1">name</span><span class="s2">, </span><span class="s1">precision</span><span class="s2">, </span><span class="s1">saturation_factor</span><span class="s2">, </span><span class="s1">traffic_mode):</span>
+	<span class="s1">config_path = </span><span class="s3">&quot;booksim2/src/configs/%s.conf&quot; </span><span class="s1">% name </span>
+	<span class="s0"># Iterate through loads</span>
+	<span class="s1">results = {}</span>
+	<span class="s1">load = (</span><span class="s4">1.0 </span><span class="s2">if </span><span class="s1">traffic_mode == </span><span class="s3">&quot;trace&quot; </span><span class="s2">else </span><span class="s4">0.001</span><span class="s1">)</span>
+	<span class="s1">granularity = </span><span class="s4">0.1</span>
+	<span class="s2">while True</span><span class="s1">:</span>
+		<span class="s1">saturation_reached = </span><span class="s2">False</span>
+		<span class="s0"># Write the BookSim config file</span>
+		<span class="s1">write_booksim_config(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">topology_path</span><span class="s2">, </span><span class="s1">load</span><span class="s2">, </span><span class="s1">config_path)</span>
+		<span class="s0"># Run BookSim</span>
+		<span class="s1">proc = subprocess.Popen([</span><span class="s3">'booksim2/src/booksim'</span><span class="s2">, </span><span class="s1">config_path]</span><span class="s2">, </span><span class="s1">stdout=subprocess.PIPE</span><span class="s2">, </span><span class="s1">stderr=subprocess.PIPE)</span>
+		<span class="s1">out = proc.stdout.read()</span>
+		<span class="s1">err = proc.stderr.read()</span>
+		<span class="s0"># BookSim log files</span>
+		<span class="s1">out_string = out.decode(</span><span class="s3">&quot;utf-8&quot;</span><span class="s1">)</span>
+		<span class="s1">err_string = err.decode(</span><span class="s3">&quot;utf-8&quot;</span><span class="s1">)</span>
+		<span class="s1">output_log_path = </span><span class="s3">&quot;logs_booksim/output_%s_%.3f.log&quot; </span><span class="s1">% (name</span><span class="s2">, </span><span class="s1">load)</span>
+		<span class="s1">error_log_path = </span><span class="s3">&quot;logs_booksim/error_%s_%.3f.log&quot; </span><span class="s1">% (name</span><span class="s2">, </span><span class="s1">load)</span>
+		<span class="s2">with </span><span class="s1">open(output_log_path</span><span class="s2">, </span><span class="s3">&quot;w&quot;</span><span class="s2">, </span><span class="s1">encoding = </span><span class="s3">&quot;utf-8&quot;</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+			<span class="s1">file.write(out_string)</span>
+		<span class="s2">with </span><span class="s1">open(error_log_path</span><span class="s2">, </span><span class="s3">&quot;w&quot;</span><span class="s2">, </span><span class="s1">encoding = </span><span class="s3">&quot;utf-8&quot;</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+			<span class="s1">file.write(err_string)</span>
+		<span class="s0"># If unstable</span>
+		<span class="s2">if </span><span class="s3">&quot;unstable&quot; </span><span class="s2">in </span><span class="s1">out_string:</span>
+			<span class="s0"># Saturation point has been reached</span>
+			<span class="s1">saturation_reached = </span><span class="s2">True</span>
+		<span class="s0"># If stable: Read results</span>
+		<span class="s2">else</span><span class="s1">:</span>
+			<span class="s0"># Read result</span>
+			<span class="s1">result_lines = out_string.split(</span><span class="s3">&quot;</span><span class="s2">\n</span><span class="s3">&quot;</span><span class="s1">)[-</span><span class="s4">35</span><span class="s1">:]</span>
+			<span class="s1">metrics = [</span><span class="s3">&quot;Packet latency&quot;</span><span class="s2">,</span><span class="s3">&quot;Network latency&quot;</span><span class="s2">,</span><span class="s3">&quot;Flit latency&quot;</span><span class="s2">,</span><span class="s3">&quot;Fragmentation&quot;</span><span class="s2">,</span><span class="s3">&quot;Injected packet rate&quot;</span><span class="s2">,</span><span class="s3">&quot;Accepted packet rate&quot;</span><span class="s2">,</span><span class="s3">&quot;Injected flit rate&quot;</span><span class="s2">,</span><span class="s3">&quot;Accepted flit rate&quot;</span><span class="s1">]</span>
+			<span class="s1">results[load] = {}</span>
+			<span class="s2">for </span><span class="s1">(line_idx</span><span class="s2">, </span><span class="s1">line) </span><span class="s2">in </span><span class="s1">enumerate(result_lines):</span>
+				<span class="s2">for </span><span class="s1">metric </span><span class="s2">in </span><span class="s1">metrics:</span>
+					<span class="s2">if </span><span class="s1">(metric + </span><span class="s3">&quot; average&quot;</span><span class="s1">) </span><span class="s2">in </span><span class="s1">line:</span>
+						<span class="s1">key = metric.lower().replace(</span><span class="s3">&quot; &quot;</span><span class="s2">,</span><span class="s3">&quot;_&quot;</span><span class="s1">)</span>
+						<span class="s1">key_length = len(key.split(</span><span class="s3">&quot;_&quot;</span><span class="s1">))	</span>
+						<span class="s1">results[load][key] = {}</span>
+						<span class="s1">results[load][key][</span><span class="s3">&quot;avg&quot;</span><span class="s1">] = float(result_lines[line_idx].split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[key_length + </span><span class="s4">2</span><span class="s1">])</span>
+						<span class="s1">results[load][key][</span><span class="s3">&quot;min&quot;</span><span class="s1">] = float(result_lines[line_idx+</span><span class="s4">1</span><span class="s1">].split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">2</span><span class="s1">])</span>
+						<span class="s1">results[load][key][</span><span class="s3">&quot;max&quot;</span><span class="s1">] = float(result_lines[line_idx+</span><span class="s4">2</span><span class="s1">].split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">2</span><span class="s1">])</span>
+				<span class="s2">if </span><span class="s3">&quot;Injected packet size average&quot; </span><span class="s2">in </span><span class="s1">line:</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;injected_packet_size&quot;</span><span class="s1">] = {}</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;injected_packet_size&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">] = float(line.split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">5</span><span class="s1">])</span>
+				<span class="s2">if </span><span class="s3">&quot;Accepted packet size average&quot; </span><span class="s2">in </span><span class="s1">line:</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;accepted_packet_size&quot;</span><span class="s1">] = {}</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;accepted_packet_size&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">] = float(line.split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">5</span><span class="s1">])</span>
+				<span class="s2">if </span><span class="s3">&quot;Hops average&quot; </span><span class="s2">in </span><span class="s1">line:</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;hops&quot;</span><span class="s1">] = {}</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;hops&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">] = float(line.split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">3</span><span class="s1">])</span>
+				<span class="s2">if </span><span class="s3">&quot;Total run time&quot; </span><span class="s2">in </span><span class="s1">line:</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;total_run_time&quot;</span><span class="s1">] = float(line.split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">3</span><span class="s1">])</span>
+				<span class="s2">if </span><span class="s3">&quot;Total time needed in cycles average&quot; </span><span class="s2">in </span><span class="s1">line:</span>
+					<span class="s1">results[load][</span><span class="s3">&quot;total_run_time_cycles&quot;</span><span class="s1">] = float(line.split(</span><span class="s3">&quot; &quot;</span><span class="s1">)[</span><span class="s4">7</span><span class="s1">])</span>
+			<span class="s0"># Check if saturation throughput has been reached</span>
+			<span class="s2">if </span><span class="s1">(</span><span class="s4">0.001 </span><span class="s2">in </span><span class="s1">results) </span><span class="s2">and </span><span class="s1">((results[</span><span class="s4">0.001</span><span class="s1">][</span><span class="s3">&quot;packet_latency&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">] * saturation_factor) &lt; results[load][</span><span class="s3">&quot;packet_latency&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">]):</span>
+				<span class="s1">saturation_reached = </span><span class="s2">True</span>
+		<span class="s0"># If we simulate a trace, we only need one simulation </span>
+		<span class="s2">if </span><span class="s1">traffic_mode == </span><span class="s3">&quot;trace&quot;</span><span class="s1">:</span>
+			<span class="s2">break</span>
+		<span class="s0"># If the saturation point has been reached go to finer granularity or abort</span>
+		<span class="s2">if </span><span class="s1">saturation_reached:</span>
+			<span class="s0"># We already are at the maximum precision -&gt; Terminate</span>
+			<span class="s2">if </span><span class="s1">round(granularity</span><span class="s2">, </span><span class="s1">(-int(math.log(precision)))) &lt;= precision:</span>
+				<span class="s2">break</span>
+			<span class="s0"># We can reduce granularity</span>
+			<span class="s2">else</span><span class="s1">:</span>
+				<span class="s1">load = (load - granularity) + (granularity / </span><span class="s4">10</span><span class="s1">)</span>
+				<span class="s1">granularity *= </span><span class="s4">0.1</span>
+		<span class="s0"># Saturation point not reached yet</span>
+		<span class="s2">elif </span><span class="s1">load &lt; </span><span class="s4">0.999</span><span class="s1">:</span>
+			<span class="s1">load = min((</span><span class="s4">0.0 </span><span class="s2">if </span><span class="s1">load == </span><span class="s4">0.001 </span><span class="s2">else </span><span class="s1">load) + granularity</span><span class="s2">, </span><span class="s4">0.999</span><span class="s1">)</span>
+		<span class="s0"># Network can support a load of 0.999 -&gt; Terminate</span>
+		<span class="s2">else</span><span class="s1">:</span>
+			<span class="s2">break</span>
+	<span class="s2">return </span><span class="s1">dict(sorted(results.items()))</span>
+			
+<span class="s2">def </span><span class="s1">run_booksim_simulation(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">link_lengths_internal</span><span class="s2">, </span><span class="s1">name):</span>
+	<span class="s0"># Write the topology.anynet file</span>
+	<span class="s1">topology_path = </span><span class="s3">&quot;booksim2/src/topologies/%s.anynet&quot; </span><span class="s1">% name </span>
+	<span class="s1">write_topology_anynet(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">link_lengths_internal</span><span class="s2">, </span><span class="s1">topology_path)</span>
+	<span class="s0"># Run simulation for multiple loads</span>
+	<span class="s1">traffic_mode = booksim_config[</span><span class="s3">&quot;traffic_mode&quot;</span><span class="s1">]</span>
+	<span class="s0"># Check that the design is valid for trace-based simulations</span>
+	<span class="s2">if </span><span class="s1">booksim_config[</span><span class="s3">&quot;traffic_mode&quot;</span><span class="s1">] == </span><span class="s3">&quot;trace&quot; </span><span class="s2">and not </span><span class="s1">check_units_for_trace_simulations(placement</span><span class="s2">, </span><span class="s1">chiplets):</span>
+		<span class="s2">return None</span>
+	<span class="s0"># Run for different granularities for synthetic traffic, run only once for real traces</span>
+	<span class="s1">precision = booksim_config[</span><span class="s3">&quot;precision&quot;</span><span class="s1">]</span>
+	<span class="s1">saturation_factor = booksim_config[</span><span class="s3">&quot;saturation_factor&quot;</span><span class="s1">]</span>
+	<span class="s2">return </span><span class="s1">run_booksim_simulation_sub(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">topology_path</span><span class="s2">, </span><span class="s1">name</span><span class="s2">, </span><span class="s1">precision</span><span class="s2">, </span><span class="s1">saturation_factor</span><span class="s2">, </span><span class="s1">booksim_config[</span><span class="s3">&quot;traffic_mode&quot;</span><span class="s1">])</span>
+
+<span class="s2">if </span><span class="s1">__name__ == </span><span class="s3">&quot;__main__&quot;</span><span class="s1">:</span>
+	<span class="s0"># Read command line arguments</span>
+	<span class="s1">parser = argparse.ArgumentParser()	</span>
+	<span class="s1">parser.add_argument(</span><span class="s3">&quot;-df&quot;</span><span class="s2">, </span><span class="s3">&quot;--design_file&quot;</span><span class="s2">, </span><span class="s1">required = </span><span class="s2">True, </span><span class="s1">help = </span><span class="s3">&quot;Path to the </span><span class="s2">\&quot;</span><span class="s3">design</span><span class="s2">\&quot; </span><span class="s3">input file&quot;</span><span class="s1">) </span>
+	<span class="s1">parser.add_argument(</span><span class="s3">&quot;-rf&quot;</span><span class="s2">, </span><span class="s3">&quot;--results_file&quot;</span><span class="s2">, </span><span class="s1">required = </span><span class="s2">True, </span><span class="s1">help = </span><span class="s3">&quot;Name of the results file (is stored in ./results/)&quot;</span><span class="s1">)</span>
+	<span class="s1">args = parser.parse_args()</span>
+	<span class="s0"># Read the design file</span>
+	<span class="s1">design = hlp.read_file(filename = args.design_file)</span>
+	<span class="s0"># Read the remaining files</span>
+	<span class="s1">technology = hlp.read_file(filename = design[</span><span class="s3">&quot;technology_nodes_file&quot;</span><span class="s1">])</span>
+	<span class="s1">chiplets = hlp.read_file(filename = design[</span><span class="s3">&quot;chiplets_file&quot;</span><span class="s1">])</span>
+	<span class="s1">placement = hlp.read_file(filename = design[</span><span class="s3">&quot;chiplet_placement_file&quot;</span><span class="s1">])</span>
+	<span class="s1">topology = hlp.read_file(filename = design[</span><span class="s3">&quot;ici_topology_file&quot;</span><span class="s1">])</span>
+	<span class="s1">packaging = hlp.read_file(filename = design[</span><span class="s3">&quot;packaging_file&quot;</span><span class="s1">])</span>
+	<span class="s1">booksim_config = hlp.read_file(filename = design[</span><span class="s3">&quot;booksim_config&quot;</span><span class="s1">])</span>
+	<span class="s0"># Validate inputs</span>
+	<span class="s1">vld.validate_design(design</span><span class="s2">, </span><span class="s1">technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">booksim_config = booksim_config)</span>
+	<span class="s0"># Construct and validate the ICI graph</span>
+	<span class="s1">ici_graph = rc.construct_ici_graph(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology)</span>
+	<span class="s1">vld.validate_ici_graph(ici_graph)</span>
+	<span class="s0"># Compute link lengths</span>
+	<span class="s1">link_lengths_internal = </span><span class="s2">None</span>
+	<span class="s2">if </span><span class="s1">packaging[</span><span class="s3">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s3">&quot;function&quot;</span><span class="s1">:</span>
+		<span class="s1">(link_summary</span><span class="s2">, </span><span class="s1">link_lengths_internal) = rc.compute_link_summary(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging)</span>
+	<span class="s0"># Run the simulation</span>
+	<span class="s1">results = run_booksim_simulation(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">booksim_config</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">link_lengths_internal</span><span class="s2">, </span><span class="s1">args.results_file)</span>
+	<span class="s0"># Store results</span>
+	<span class="s1">result_path = </span><span class="s3">&quot;results/%s.json&quot; </span><span class="s1">% args.results_file</span>
+	<span class="s1">hlp.write_file(result_path</span><span class="s2">, </span><span class="s1">results)</span>
+
+</pre>
+</body>
+</html>

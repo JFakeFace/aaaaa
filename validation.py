@@ -187,7 +187,7 @@ def validate_design(design, technology = None, chiplets = None, placement = None
 	return errors == 0
 
 def validate_ici_graph(ici_graph):
-	(c, r, n, neighbors, relay_map, nodes_by_type) = ici_graph
+	(c, r, n, neighbors, relay_map, nodes_by_type,phy_neighbors) = ici_graph
 	# Check for unconnected chiplets or irouters
 	for node in range(n):
 		if len(neighbors[node]) == 0:

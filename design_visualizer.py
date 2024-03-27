@@ -74,7 +74,10 @@ if __name__ == "__main__":
 	parser.add_argument("-df", "--design_file", required = True, help = "Path to the \"design\" input file") 
 	args = parser.parse_args()
 	# Read the design file
+	print(args.design_file,1111111)
 	design = hlp.read_file(filename = args.design_file)
+	print(design)
 	# Visualize the design
+	print(args.design_file.split("/")[-1].split(".")[0],1111)
 	visualize_design(design_name = args.design_file.split("/")[-1].split(".")[0], design = design)
 	

@@ -1,0 +1,249 @@
+<html>
+<head>
+<title>plots.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6a8759;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+plots.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">os</span>
+<span class="s2">import </span><span class="s1">matplotlib.pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+
+<span class="s0"># Import RapidChiplet Files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+
+<span class="s0"># Colors and markers for plotting</span>
+<span class="s1">colors = [</span><span class="s3">&quot;#990099&quot;</span><span class="s2">,</span><span class="s3">&quot;#999900&quot;</span><span class="s2">,</span><span class="s3">&quot;#000099&quot;</span><span class="s2">,</span><span class="s3">&quot;#006600&quot;</span><span class="s2">,</span><span class="s3">&quot;#00aa66&quot;</span><span class="s2">,</span><span class="s3">&quot;#22dd99&quot;</span><span class="s2">,</span><span class="s3">&quot;#990000&quot;</span><span class="s2">,</span><span class="s3">&quot;#0066cc&quot;</span><span class="s2">,</span><span class="s3">&quot;#66ccff&quot;</span><span class="s2">,</span><span class="s3">&quot;#000000&quot;</span><span class="s1">]</span>
+<span class="s1">markers = [</span><span class="s3">&quot;o&quot;</span><span class="s2">,</span><span class="s3">&quot;d&quot;</span><span class="s2">,</span><span class="s3">&quot;s&quot;</span><span class="s2">,</span><span class="s3">&quot;x&quot;</span><span class="s2">,</span><span class="s3">&quot;+&quot;</span><span class="s2">,</span><span class="s3">&quot;^&quot;</span><span class="s2">,</span><span class="s3">&quot;*&quot;</span><span class="s2">,</span><span class="s3">&quot;D&quot;</span><span class="s2">,</span><span class="s3">&quot;p&quot;</span><span class="s2">,</span><span class="s3">&quot;h&quot;</span><span class="s1">]</span>
+
+<span class="s0"># Create the runtime plot</span>
+<span class="s2">def </span><span class="s1">create_runtime_plot(max_size</span><span class="s2">, </span><span class="s1">reps):</span>
+	<span class="s0"># Initialize plot</span>
+	<span class="s1">(fig</span><span class="s2">, </span><span class="s1">ax) = plt.subplots(</span><span class="s4">1</span><span class="s2">, </span><span class="s4">2</span><span class="s2">, </span><span class="s1">figsize = (</span><span class="s4">6</span><span class="s2">, </span><span class="s4">3</span><span class="s1">))</span>
+	<span class="s1">plt.subplots_adjust(left=</span><span class="s4">0.12</span><span class="s2">, </span><span class="s1">right = </span><span class="s4">0.995</span><span class="s2">, </span><span class="s1">top = </span><span class="s4">0.92</span><span class="s2">, </span><span class="s1">bottom = </span><span class="s4">0.25</span><span class="s2">, </span><span class="s1">wspace = </span><span class="s4">0.35</span><span class="s1">)</span>
+	<span class="s1">sizes = list(range(</span><span class="s4">2</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">1</span><span class="s1">))</span>
+	<span class="s0"># Iterate through topologies</span>
+	<span class="s2">for </span><span class="s1">(i</span><span class="s2">, </span><span class="s1">topo) </span><span class="s2">in </span><span class="s1">enumerate([</span><span class="s3">&quot;mesh&quot;</span><span class="s2">,</span><span class="s3">&quot;cmesh&quot;</span><span class="s1">]):</span>
+		<span class="s1">data = {}</span>
+		<span class="s0"># Iterate through scales</span>
+		<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes:</span>
+			<span class="s0"># Iterate through repetitions</span>
+			<span class="s2">for </span><span class="s1">rep </span><span class="s2">in </span><span class="s1">range(reps):</span>
+				<span class="s0"># Read measurements</span>
+				<span class="s1">path = </span><span class="s3">&quot;results/%s_%dx%d_%d.json&quot; </span><span class="s1">% (topo</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">rep)	</span>
+				<span class="s2">if </span><span class="s1">os.path.exists(path):</span>
+					<span class="s1">results = hlp.read_file(path)</span>
+					<span class="s2">for </span><span class="s1">key </span><span class="s2">in </span><span class="s1">results[</span><span class="s3">&quot;runtime&quot;</span><span class="s1">]:</span>
+						<span class="s2">if </span><span class="s1">key </span><span class="s2">not in </span><span class="s1">data:</span>
+							<span class="s1">data[key] = {}</span>
+						<span class="s2">if </span><span class="s1">x </span><span class="s2">not in </span><span class="s1">data[key]:</span>
+							<span class="s1">data[key][x] = []</span>
+						<span class="s1">data[key][x].append(results[</span><span class="s3">&quot;runtime&quot;</span><span class="s1">][key])</span>
+		<span class="s0"># Iterate through the single timing metrics</span>
+		<span class="s2">for </span><span class="s1">(j</span><span class="s2">, </span><span class="s1">key) </span><span class="s2">in </span><span class="s1">enumerate(data):</span>
+			<span class="s1">xvals = list(data[key].keys())</span>
+			<span class="s1">yvals = [sum(x) / len(x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">data[key].values()]</span>
+			<span class="s1">ylow = [min(x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">data[key].values()]</span>
+			<span class="s1">yhigh = [max(x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">data[key].values()]</span>
+			<span class="s0"># Plot a given timing metric</span>
+			<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = key</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = markers[j]</span><span class="s2">, </span><span class="s1">color = colors[j]</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].fill_between(xvals</span><span class="s2">, </span><span class="s1">ylow</span><span class="s2">, </span><span class="s1">yhigh</span><span class="s2">, </span><span class="s1">color = colors[j]</span><span class="s2">, </span><span class="s1">alpha = </span><span class="s4">0.5</span><span class="s1">)</span>
+		<span class="s0"># Configure the sub-plot</span>
+		<span class="s1">sizes_ = sizes </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes </span><span class="s2">if </span><span class="s1">x%</span><span class="s4">2</span><span class="s1">==</span><span class="s4">0</span><span class="s1">]</span>
+		<span class="s1">ax[i].set_title(</span><span class="s3">&quot;2D Mesh&quot; </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s3">&quot;Concentrated 2D Mesh&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;major&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1.0</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;minor&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">0.25</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_xticks(sizes_)</span>
+		<span class="s1">ax[i].set_xticklabels([</span><span class="s3">&quot;%dx%d&quot; </span><span class="s1">% (x</span><span class="s2">,</span><span class="s1">x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes_]</span><span class="s2">, </span><span class="s1">rotation = </span><span class="s4">90</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_xlabel(</span><span class="s3">&quot;Scale&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_ylabel(</span><span class="s3">&quot;Runtime [s]&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_yscale(</span><span class="s3">&quot;log&quot;</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_yticks([</span><span class="s4">10</span><span class="s1">**x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">range(-</span><span class="s4">6</span><span class="s2">,</span><span class="s4">1</span><span class="s1">)])</span>
+		<span class="s1">ax[i].set_xlim(</span><span class="s4">1.5</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">0.5</span><span class="s1">)</span>
+		<span class="s1">ax[i].set_ylim(</span><span class="s4">1e-6</span><span class="s2">,</span><span class="s4">1e0</span><span class="s1">)</span>
+	<span class="s0"># Save the plot</span>
+	<span class="s1">plt.savefig(</span><span class="s3">&quot;plots/runtime.pdf&quot;</span><span class="s1">)</span>
+
+<span class="s0"># Create the accuracy plot</span>
+<span class="s2">def </span><span class="s1">create_accuracy_plot(max_size):</span>
+	<span class="s0"># One plot for latency, one for throughput</span>
+	<span class="s2">for </span><span class="s1">metric </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;latency&quot;</span><span class="s2">,</span><span class="s3">&quot;throughput&quot;</span><span class="s1">]:</span>
+		<span class="s1">(fig</span><span class="s2">, </span><span class="s1">ax) = plt.subplots(</span><span class="s4">1</span><span class="s2">, </span><span class="s4">2</span><span class="s2">, </span><span class="s1">figsize = (</span><span class="s4">6</span><span class="s2">, </span><span class="s4">2.5</span><span class="s1">))</span>
+		<span class="s1">plt.subplots_adjust(left=</span><span class="s4">0.093</span><span class="s2">, </span><span class="s1">right = </span><span class="s4">0.99</span><span class="s2">, </span><span class="s1">top = </span><span class="s4">0.9</span><span class="s2">, </span><span class="s1">bottom = </span><span class="s4">0.3</span><span class="s2">, </span><span class="s1">wspace = </span><span class="s4">0.3</span><span class="s1">)</span>
+		<span class="s1">sizes = list(range(</span><span class="s4">2</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">1</span><span class="s1">))</span>
+		<span class="s0"># One subplot per topology</span>
+		<span class="s2">for </span><span class="s1">(i</span><span class="s2">, </span><span class="s1">topo) </span><span class="s2">in </span><span class="s1">enumerate([</span><span class="s3">&quot;mesh&quot;</span><span class="s2">,</span><span class="s3">&quot;cmesh&quot;</span><span class="s1">]):</span>
+			<span class="s0"># One data series per traffic class</span>
+			<span class="s2">for </span><span class="s1">(j</span><span class="s2">, </span><span class="s1">traffic) </span><span class="s2">in </span><span class="s1">enumerate([</span><span class="s3">&quot;C2C&quot;</span><span class="s2">,</span><span class="s3">&quot;C2M&quot;</span><span class="s2">,</span><span class="s3">&quot;C2I&quot;</span><span class="s2">,</span><span class="s3">&quot;M2I&quot;</span><span class="s1">]):</span>
+				<span class="s0"># Read data</span>
+				<span class="s1">metric_rc = {}</span>
+				<span class="s1">metric_bs = {}</span>
+				<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes:</span>
+					<span class="s1">path_rc = </span><span class="s3">&quot;results/%s_%dx%d_%d.json&quot; </span><span class="s1">% (topo</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s4">0</span><span class="s1">)	</span>
+					<span class="s1">path_bs = </span><span class="s3">&quot;results/sim_%s_%dx%d_%s.json&quot; </span><span class="s1">% (topo</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">traffic)	</span>
+					<span class="s0"># RapidChiplet</span>
+					<span class="s2">if </span><span class="s1">os.path.exists(path_rc):</span>
+						<span class="s1">results_rc = hlp.read_file(path_rc)</span>
+						<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot;</span><span class="s1">:</span>
+							<span class="s1">metric_rc[x] = results_rc[</span><span class="s3">&quot;ici_latency&quot;</span><span class="s1">][traffic][</span><span class="s3">&quot;avg&quot;</span><span class="s1">]</span>
+						<span class="s2">else</span><span class="s1">:</span>
+							<span class="s1">metric_rc[x] = </span><span class="s4">100 </span><span class="s1">* results_rc[</span><span class="s3">&quot;ici_throughput&quot;</span><span class="s1">][traffic][</span><span class="s3">&quot;fraction_of_theoretical_peak&quot;</span><span class="s1">]</span>
+					<span class="s0"># BookSim</span>
+					<span class="s2">if </span><span class="s1">os.path.exists(path_bs):</span>
+						<span class="s1">results_bs = hlp.read_file(path_bs)</span>
+						<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot;</span><span class="s1">:</span>
+							<span class="s1">metric_bs[x] = results_bs[</span><span class="s3">&quot;0.001&quot;</span><span class="s1">][</span><span class="s3">&quot;packet_latency&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">]</span>
+						<span class="s2">else</span><span class="s1">:</span>
+							<span class="s1">metric_bs[x] = </span><span class="s4">100 </span><span class="s1">* max([float(key) </span><span class="s2">for </span><span class="s1">key </span><span class="s2">in </span><span class="s1">results_bs </span><span class="s2">if </span><span class="s1">float(key) &lt;= </span><span class="s4">3 </span><span class="s1">* results_bs[</span><span class="s3">&quot;0.001&quot;</span><span class="s1">][</span><span class="s3">&quot;packet_latency&quot;</span><span class="s1">][</span><span class="s3">&quot;avg&quot;</span><span class="s1">]])</span>
+				<span class="s0"># Plot data</span>
+				<span class="s1">colors1 = [</span><span class="s3">&quot;#000066&quot;</span><span class="s2">,</span><span class="s3">&quot;#006600&quot;</span><span class="s2">,</span><span class="s3">&quot;#660000&quot;</span><span class="s2">,</span><span class="s3">&quot;#660066&quot;</span><span class="s1">]</span>
+				<span class="s1">colors2 = [</span><span class="s3">&quot;#6666FF&quot;</span><span class="s2">,</span><span class="s3">&quot;#66FF66&quot;</span><span class="s2">,</span><span class="s3">&quot;#FF6666&quot;</span><span class="s2">,</span><span class="s3">&quot;#FF66FF&quot;</span><span class="s1">]</span>
+				<span class="s0"># RapidChiplet</span>
+				<span class="s1">xvals = list(metric_rc.keys())</span>
+				<span class="s1">yvals = list(metric_rc.values())</span>
+				<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (RC)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = markers[j+</span><span class="s4">4</span><span class="s1">]</span><span class="s2">, </span><span class="s1">color = colors1[j]</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;--&quot;</span><span class="s1">)</span>
+				<span class="s0"># BookSim </span>
+				<span class="s1">xvals = list(metric_bs.keys())</span>
+				<span class="s1">yvals = list(metric_bs.values())</span>
+				<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (BS)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = markers[j+</span><span class="s4">4</span><span class="s1">]</span><span class="s2">, </span><span class="s1">color = colors2[j]</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;:&quot;</span><span class="s1">)</span>
+				<span class="s0"># Compute and print average relative error</span>
+				<span class="s1">rel_errors = []</span>
+				<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes:</span>
+					<span class="s2">if </span><span class="s1">x </span><span class="s2">in </span><span class="s1">metric_rc </span><span class="s2">and </span><span class="s1">x </span><span class="s2">in </span><span class="s1">metric_bs:</span>
+						<span class="s1">rel_errors.append(abs(metric_rc[x] - metric_bs[x]) / metric_bs[x])</span>
+				<span class="s2">if </span><span class="s1">len(rel_errors) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+					<span class="s1">avg_rel_error = sum(rel_errors) / len(rel_errors) * </span><span class="s4">100</span>
+					<span class="s1">print(</span><span class="s3">&quot;%s %s %s AVG relative error: %.2f%%&quot; </span><span class="s1">% (metric</span><span class="s2">, </span><span class="s1">topo</span><span class="s2">, </span><span class="s1">traffic</span><span class="s2">, </span><span class="s1">avg_rel_error))</span>
+
+			<span class="s0"># Configure the sub-plot</span>
+			<span class="s1">real_sizes = sizes </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes </span><span class="s2">if </span><span class="s1">x%</span><span class="s4">2</span><span class="s1">==</span><span class="s4">0</span><span class="s1">]</span>
+			<span class="s1">ax[i].set_title(</span><span class="s3">&quot;2D Mesh&quot; </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s3">&quot;Concentrated 2D Mesh&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;major&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1.0</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;minor&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">0.25</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xticks(real_sizes)</span>
+			<span class="s1">ax[i].set_xticklabels([</span><span class="s3">&quot;%dx%d&quot; </span><span class="s1">% (x</span><span class="s2">,</span><span class="s1">x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">real_sizes]</span><span class="s2">, </span><span class="s1">rotation = </span><span class="s4">90</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xlabel(</span><span class="s3">&quot;Scale&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_ylabel(</span><span class="s3">&quot;Latency [cycles]&quot; </span><span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot; </span><span class="s2">else </span><span class="s3">&quot;Throughput [%]&quot;</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;throughput&quot;</span><span class="s1">:</span>
+				<span class="s1">ax[i].set_ylim(bottom = </span><span class="s4">0</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot; </span><span class="s2">and </span><span class="s1">i == </span><span class="s4">0</span><span class="s1">:	</span>
+				<span class="s1">ax[i].set_ylim(</span><span class="s4">0</span><span class="s2">,</span><span class="s4">600</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot; </span><span class="s2">and </span><span class="s1">i == </span><span class="s4">1</span><span class="s1">:	</span>
+				<span class="s1">ax[i].set_ylim(</span><span class="s4">0</span><span class="s2">,</span><span class="s4">150</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xlim(</span><span class="s4">1.5</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">0.5</span><span class="s1">)</span>
+		<span class="s0"># Store the plot</span>
+		<span class="s1">plt.savefig(</span><span class="s3">&quot;plots/accuracy_%s.pdf&quot; </span><span class="s1">% metric)</span>
+
+<span class="s0"># Create the accuracy plot</span>
+<span class="s2">def </span><span class="s1">create_speedup_plot(max_size):</span>
+	<span class="s0"># One plot for latency, one for throughput</span>
+	<span class="s2">for </span><span class="s1">metric </span><span class="s2">in </span><span class="s1">[</span><span class="s3">&quot;latency&quot;</span><span class="s2">,</span><span class="s3">&quot;throughput&quot;</span><span class="s1">]:</span>
+		<span class="s1">(fig</span><span class="s2">, </span><span class="s1">ax) = plt.subplots(</span><span class="s4">1</span><span class="s2">, </span><span class="s4">2</span><span class="s2">, </span><span class="s1">figsize = (</span><span class="s4">6</span><span class="s2">, </span><span class="s4">2.5</span><span class="s1">))</span>
+		<span class="s1">plt.subplots_adjust(left=</span><span class="s4">0.11</span><span class="s2">, </span><span class="s1">right = </span><span class="s4">0.99</span><span class="s2">, </span><span class="s1">top = </span><span class="s4">0.89</span><span class="s2">, </span><span class="s1">bottom = </span><span class="s4">0.3</span><span class="s2">, </span><span class="s1">wspace = </span><span class="s4">0.35</span><span class="s1">)</span>
+		<span class="s1">sizes = list(range(</span><span class="s4">2</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">1</span><span class="s1">))</span>
+		<span class="s0"># One subplot per topology</span>
+		<span class="s2">for </span><span class="s1">(i</span><span class="s2">, </span><span class="s1">topo) </span><span class="s2">in </span><span class="s1">enumerate([</span><span class="s3">&quot;mesh&quot;</span><span class="s2">,</span><span class="s3">&quot;cmesh&quot;</span><span class="s1">]):</span>
+			<span class="s0"># One data series for RapidChiplet</span>
+			<span class="s1">time_rc = {}</span>
+			<span class="s0"># Three data series for BookSim (10%, 1%, 0.1% precision)</span>
+			<span class="s1">time_bs_1 = {}</span>
+			<span class="s1">time_bs_2 = {}</span>
+			<span class="s1">time_bs_3 = {}</span>
+			<span class="s0"># Read data</span>
+			<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes:</span>
+				<span class="s1">path_rc = </span><span class="s3">&quot;results/%s_%dx%d_%d.json&quot; </span><span class="s1">% (topo</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s4">0</span><span class="s1">)	</span>
+				<span class="s0"># Read RapidChiplet data</span>
+				<span class="s2">if </span><span class="s1">os.path.exists(path_rc):</span>
+					<span class="s1">results_rc = hlp.read_file(path_rc)</span>
+					<span class="s1">time_rc[x] = results_rc[</span><span class="s3">&quot;runtime&quot;</span><span class="s1">][</span><span class="s3">&quot;total_runtime&quot;</span><span class="s1">]</span>
+				<span class="s0"># Read BookSim data</span>
+				<span class="s2">for </span><span class="s1">(j</span><span class="s2">, </span><span class="s1">traffic) </span><span class="s2">in </span><span class="s1">enumerate([</span><span class="s3">&quot;C2C&quot;</span><span class="s2">,</span><span class="s3">&quot;C2M&quot;</span><span class="s2">,</span><span class="s3">&quot;C2I&quot;</span><span class="s2">,</span><span class="s3">&quot;M2I&quot;</span><span class="s1">]):</span>
+					<span class="s1">path_bs = </span><span class="s3">&quot;results/sim_%s_%dx%d_%s.json&quot; </span><span class="s1">% (topo</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">traffic)	</span>
+					<span class="s2">if </span><span class="s1">os.path.exists(path_bs):</span>
+						<span class="s2">if </span><span class="s1">x </span><span class="s2">not in </span><span class="s1">time_bs_1:</span>
+							<span class="s1">time_bs_1[x] = </span><span class="s4">0</span>
+						<span class="s2">if </span><span class="s1">x </span><span class="s2">not in </span><span class="s1">time_bs_2:</span>
+							<span class="s1">time_bs_2[x] = </span><span class="s4">0</span>
+						<span class="s2">if </span><span class="s1">x </span><span class="s2">not in </span><span class="s1">time_bs_3:</span>
+							<span class="s1">time_bs_3[x] = </span><span class="s4">0</span>
+						<span class="s1">results_bs = hlp.read_file(path_bs)</span>
+						<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot;</span><span class="s1">:</span>
+							<span class="s1">time_bs_1[x] += results_bs[</span><span class="s3">&quot;0.001&quot;</span><span class="s1">][</span><span class="s3">&quot;total_run_time&quot;</span><span class="s1">]</span>
+						<span class="s2">else</span><span class="s1">:</span>
+							<span class="s1">time_bs_1[x] += sum([results_bs[load][</span><span class="s3">&quot;total_run_time&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">load </span><span class="s2">in </span><span class="s1">results_bs </span><span class="s2">if </span><span class="s1">round(float(load)</span><span class="s2">,</span><span class="s4">1</span><span class="s1">) == float(load)])</span>
+							<span class="s1">time_bs_2[x] += sum([results_bs[load][</span><span class="s3">&quot;total_run_time&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">load </span><span class="s2">in </span><span class="s1">results_bs </span><span class="s2">if </span><span class="s1">round(float(load)</span><span class="s2">,</span><span class="s4">2</span><span class="s1">) == float(load)])</span>
+							<span class="s1">time_bs_3[x] += sum([results_bs[load][</span><span class="s3">&quot;total_run_time&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">load </span><span class="s2">in </span><span class="s1">results_bs </span><span class="s2">if </span><span class="s1">round(float(load)</span><span class="s2">,</span><span class="s4">3</span><span class="s1">) == float(load)])</span>
+			<span class="s0"># Plot RapidChiplet data</span>
+			<span class="s1">xvals = list(time_rc.keys())</span>
+			<span class="s1">yvals = list(time_rc.values())</span>
+			<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (RC)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = </span><span class="s3">&quot;o&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#000000&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;--&quot;</span><span class="s1">)</span>
+			<span class="s0"># Plot BookSim data</span>
+			<span class="s2">if </span><span class="s1">len(time_bs_1) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">xvals = list(time_bs_1.keys())</span>
+				<span class="s1">yvals = list(time_bs_1.values())</span>
+				<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (BS)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = </span><span class="s3">&quot;s&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#000099&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;:&quot;</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">len(time_bs_2) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">xvals = list(time_bs_2.keys())</span>
+				<span class="s1">yvals = list(time_bs_2.values())</span>
+				<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (BS)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = </span><span class="s3">&quot;D&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#009900&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;:&quot;</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">len(time_bs_3) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">xvals = list(time_bs_3.keys())</span>
+				<span class="s1">yvals = list(time_bs_3.values())</span>
+				<span class="s1">ax[i].plot(xvals</span><span class="s2">, </span><span class="s1">yvals</span><span class="s2">, </span><span class="s1">label = traffic + </span><span class="s3">&quot; (BS)&quot;</span><span class="s2">, </span><span class="s1">markersize = </span><span class="s4">3</span><span class="s2">, </span><span class="s1">marker = </span><span class="s3">&quot;P&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#990000&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1</span><span class="s2">, </span><span class="s1">markerfacecolor = </span><span class="s3">&quot;none&quot;</span><span class="s2">, </span><span class="s1">linestyle = </span><span class="s3">&quot;:&quot;</span><span class="s1">)</span>
+			<span class="s0"># Compute and print speedups </span>
+			<span class="s1">speedups_1 = []</span>
+			<span class="s1">speedups_2 = []</span>
+			<span class="s1">speedups_3 = []</span>
+			<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes:</span>
+				<span class="s2">if </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_rc </span><span class="s2">and </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_bs_1:</span>
+					<span class="s1">speedups_1.append(time_bs_1[x] / time_rc[x])</span>
+				<span class="s2">if </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_rc </span><span class="s2">and </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_bs_2:</span>
+					<span class="s1">speedups_2.append(time_bs_2[x] / time_rc[x])</span>
+				<span class="s2">if </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_rc </span><span class="s2">and </span><span class="s1">x </span><span class="s2">in </span><span class="s1">time_bs_3:</span>
+					<span class="s1">speedups_3.append(time_bs_3[x] / time_rc[x])</span>
+			<span class="s2">if </span><span class="s1">len(speedups_1) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">avg_speedup = sum(speedups_1) / len(speedups_1)</span>
+				<span class="s1">print(</span><span class="s3">&quot;%s %s AVG speedup 10%%: %.2fx&quot; </span><span class="s1">% (metric</span><span class="s2">, </span><span class="s1">topo</span><span class="s2">, </span><span class="s1">avg_speedup))</span>
+			<span class="s2">if </span><span class="s1">len(speedups_2) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">avg_speedup = sum(speedups_2) / len(speedups_2)</span>
+				<span class="s1">print(</span><span class="s3">&quot;%s %s AVG speedup 1%%: %.2fx&quot; </span><span class="s1">% (metric</span><span class="s2">, </span><span class="s1">topo</span><span class="s2">, </span><span class="s1">avg_speedup))</span>
+			<span class="s2">if </span><span class="s1">len(speedups_3) &gt; </span><span class="s4">0</span><span class="s1">:</span>
+				<span class="s1">avg_speedup = sum(speedups_3) / len(speedups_3)</span>
+				<span class="s1">print(</span><span class="s3">&quot;%s %s AVG speedup 0.1%%: %.2fx&quot; </span><span class="s1">% (metric</span><span class="s2">, </span><span class="s1">topo</span><span class="s2">, </span><span class="s1">avg_speedup))</span>
+			<span class="s0"># Configure sub-plot</span>
+			<span class="s1">real_sizes = sizes </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s1">[x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">sizes </span><span class="s2">if </span><span class="s1">x%</span><span class="s4">2</span><span class="s1">==</span><span class="s4">0</span><span class="s1">]</span>
+			<span class="s1">ax[i].set_title(</span><span class="s3">&quot;2D Mesh&quot; </span><span class="s2">if </span><span class="s1">topo == </span><span class="s3">&quot;mesh&quot; </span><span class="s2">else </span><span class="s3">&quot;Concentrated 2D Mesh&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;major&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">1.0</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].grid(which = </span><span class="s3">&quot;minor&quot;</span><span class="s2">, </span><span class="s1">linewidth = </span><span class="s4">0.25</span><span class="s2">, </span><span class="s1">axis = </span><span class="s3">&quot;y&quot;</span><span class="s2">, </span><span class="s1">color = </span><span class="s3">&quot;#666666&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xticks(real_sizes)</span>
+			<span class="s1">ax[i].set_xticklabels([</span><span class="s3">&quot;%dx%d&quot; </span><span class="s1">% (x</span><span class="s2">,</span><span class="s1">x) </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">real_sizes]</span><span class="s2">, </span><span class="s1">rotation = </span><span class="s4">90</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xlabel(</span><span class="s3">&quot;Scale&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_ylabel(</span><span class="s3">&quot;Runtime [s]&quot;</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_yscale(</span><span class="s3">&quot;log&quot;</span><span class="s1">)</span>
+			<span class="s2">if </span><span class="s1">metric == </span><span class="s3">&quot;latency&quot;</span><span class="s1">:</span>
+				<span class="s1">ax[i].set_ylim(</span><span class="s4">1e-3</span><span class="s2">,</span><span class="s4">1e1</span><span class="s1">)</span>
+			<span class="s2">else</span><span class="s1">:</span>
+				<span class="s1">ax[i].set_yticks([</span><span class="s4">10</span><span class="s1">**x </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">range(-</span><span class="s4">3</span><span class="s2">,</span><span class="s4">4</span><span class="s2">,</span><span class="s4">1</span><span class="s1">)])</span>
+				<span class="s1">ax[i].set_ylim(</span><span class="s4">1e-3</span><span class="s1">*</span><span class="s4">0.7</span><span class="s2">,</span><span class="s4">1e3</span><span class="s1">*</span><span class="s4">1.3</span><span class="s1">)</span>
+			<span class="s1">ax[i].set_xlim(</span><span class="s4">1.5</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">0.5</span><span class="s1">)</span>
+		<span class="s0"># Store plot</span>
+		<span class="s1">plt.savefig(</span><span class="s3">&quot;plots/speedup_%s.pdf&quot; </span><span class="s1">% metric)</span>
+
+<span class="s2">def </span><span class="s1">reproduce_plots_from_paper(reps</span><span class="s2">, </span><span class="s1">max_size):</span>
+	<span class="s1">create_runtime_plot(max_size</span><span class="s2">, </span><span class="s1">reps)</span>
+	<span class="s1">create_accuracy_plot(max_size)</span>
+	<span class="s1">create_speedup_plot(max_size)</span>
+</pre>
+</body>
+</html>

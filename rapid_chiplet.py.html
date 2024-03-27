@@ -1,0 +1,1162 @@
+<html>
+<head>
+<title>rapid_chiplet.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6897bb;}
+.s4 { color: #6a8759;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+rapid_chiplet.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">time</span>
+<span class="s2">import </span><span class="s1">math</span>
+<span class="s2">import </span><span class="s1">copy</span>
+<span class="s2">import </span><span class="s1">queue</span>
+<span class="s2">import </span><span class="s1">argparse</span>
+<span class="s2">import </span><span class="s1">random </span><span class="s2">as </span><span class="s1">rnd</span>
+<span class="s2">from </span><span class="s1">threading </span><span class="s2">import </span><span class="s1">Thread</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+<span class="s2">import </span><span class="s1">validation </span><span class="s2">as </span><span class="s1">vld</span>
+
+<span class="s0"># author: jiaxuming</span>
+<span class="s0"># time : 2024/2/5 18:42</span>
+<span class="s0"># chiplet 实例化</span>
+<span class="s0">###################################################################</span>
+<span class="s1">event_queue = </span><span class="s2">None</span>
+<span class="s1">chiplet_ins = </span><span class="s2">None</span>
+<span class="s1">waiting = </span><span class="s3">0</span>
+
+<span class="s2">class </span><span class="s1">message:</span>
+
+    <span class="s2">def </span><span class="s1">__init__(self</span><span class="s2">, </span><span class="s1">data_id=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_src=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_end=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">next_chiplet=-</span><span class="s3">1</span><span class="s2">,</span>
+                 <span class="s1">data_type=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size=</span><span class="s3">0</span><span class="s2">, </span><span class="s1">data_time=</span><span class="s3">0</span><span class="s2">, </span><span class="s1">src_port=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">end_port=-</span><span class="s3">1</span><span class="s2">,</span><span class="s1">old_port = </span><span class="s2">None</span><span class="s1">):</span>
+        <span class="s1">self.data_id = data_id</span>
+        <span class="s1">self.data_src = data_src</span>
+        <span class="s1">self.data_end = data_end</span>
+        <span class="s1">self.next_chiplet = next_chiplet</span>
+        <span class="s1">self.data_type = data_type  </span><span class="s0"># data 0 表示 credit确认消息 1 表示路由消息 2 表示端口询问input缓冲区 3 询问输出缓冲区是否有位置</span>
+        <span class="s1">self.data_size = data_size</span>
+        <span class="s1">self.data_time = data_time  </span><span class="s0"># 数据到达时间</span>
+        <span class="s1">self.src_port = src_port</span>
+        <span class="s1">self.end_port = end_port</span>
+        <span class="s1">self.old_port = old_port</span>
+
+    <span class="s2">def </span><span class="s1">__repr__(self):</span>
+        <span class="s2">return </span><span class="s1">(</span><span class="s4">f&quot;</span><span class="s2">{</span><span class="s1">self.__class__.__name__</span><span class="s2">}</span><span class="s4">(&quot;</span>
+                <span class="s4">f&quot;data_id=</span><span class="s2">{</span><span class="s1">self.data_id</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;data_src=</span><span class="s2">{</span><span class="s1">self.data_src</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;data_end=</span><span class="s2">{</span><span class="s1">self.data_end</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;next_chiplet=</span><span class="s2">{</span><span class="s1">self.next_chiplet</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;data_type=</span><span class="s2">{</span><span class="s1">self.data_type</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;data_size=</span><span class="s2">{</span><span class="s1">self.data_size</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;data_time=</span><span class="s2">{</span><span class="s1">self.data_time</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;src_port=</span><span class="s2">{</span><span class="s1">self.src_port</span><span class="s2">}</span><span class="s4">, &quot;</span>
+                <span class="s4">f&quot;end_port=</span><span class="s2">{</span><span class="s1">self.end_port</span><span class="s2">}</span><span class="s4">)&quot;</span><span class="s1">)</span>
+
+    <span class="s2">def </span><span class="s1">get_data_id(self):</span>
+        <span class="s2">return </span><span class="s1">self.data_id</span>
+
+    <span class="s2">def </span><span class="s1">get_data_end(self):</span>
+        <span class="s2">return </span><span class="s1">self.data_end</span>
+
+    <span class="s2">def </span><span class="s1">get_data_src(self):</span>
+        <span class="s2">return </span><span class="s1">self.data_src</span>
+
+    <span class="s2">def </span><span class="s1">get_data_type(self):</span>
+        <span class="s2">return </span><span class="s1">self.data_type</span>
+
+    <span class="s2">def </span><span class="s1">__lt__(self</span><span class="s2">, </span><span class="s1">other):</span>
+        <span class="s2">return </span><span class="s1">self.data_time &lt; other.data_time</span>
+
+
+<span class="s2">class </span><span class="s1">chiplet_instance:</span>
+    <span class="s2">def </span><span class="s1">__init__(self</span><span class="s2">, </span><span class="s1">chiplet_id=-</span><span class="s3">1</span><span class="s2">, </span><span class="s1">port_num=</span><span class="s3">0</span><span class="s2">, </span><span class="s1">input_buffer=</span><span class="s3">0</span><span class="s2">, </span><span class="s1">output_buffer=</span><span class="s3">0</span><span class="s1">):</span>
+        <span class="s1">self.chiplet_id = chiplet_id</span>
+        <span class="s1">self.port_num = port_num</span>
+        <span class="s1">self.input_buffer = input_buffer</span>
+        <span class="s1">self.output_buffer = output_buffer</span>
+        <span class="s1">self.input_data = [[] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(port_num)]</span>
+        <span class="s1">self.output_data = [[] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(port_num)]</span>
+
+    <span class="s0"># data_id = -1, data_src = -1, data_end = -1, next_chiplet = -1, data_type = -1, data_size = 0, data_time = 0, src_port = -1, end_port = -1</span>
+
+
+<span class="s2">def </span><span class="s1">creat_event1(message</span><span class="s2">, </span><span class="s1">router_map):</span>
+    <span class="s2">global </span><span class="s1">event_queue</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s0"># 解析消息中的必要信息</span>
+    <span class="s1">src_chiplet = message.data_src</span>
+    <span class="s1">src_port = message.src_port</span>
+    <span class="s1">dst_chiplet = message.data_end</span>
+    <span class="s1">next_chiplet = message.next_chiplet</span>
+    <span class="s1">message.data_time += node_internal_latency[src_chiplet]</span>
+    <span class="s1">message.data_type = </span><span class="s3">1</span>
+    <span class="s1">found = </span><span class="s2">False</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(chiplet_ins[src_chiplet].input_data[message.old_port])):</span>
+
+        <span class="s2">if </span><span class="s1">chiplet_ins[src_chiplet].input_data[message.old_port][i].data_id == message.data_id:</span>
+            <span class="s0"># print(i)</span>
+            <span class="s0"># print(chiplet_ins[src_chiplet].input_data[src_port][i])</span>
+            <span class="s2">del </span><span class="s1">chiplet_ins[src_chiplet].input_data[message.old_port][i]</span>
+            <span class="s1">found = </span><span class="s2">True</span>
+            <span class="s2">break</span>
+    <span class="s2">if </span><span class="s1">found == </span><span class="s2">False</span><span class="s1">:</span>
+        <span class="s1">print(</span><span class="s4">'Could not find the data with data_id input: %d' </span><span class="s1">% message.data_id)</span>
+
+    <span class="s1">event_queue.put(message)</span>
+
+
+<span class="s2">def </span><span class="s1">ask_input_room(message</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neibors):</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">src_chiplet = message.data_src</span>
+    <span class="s1">dst_chiplet = message.data_end</span>
+    <span class="s1">next_chiplet = message.next_chiplet</span>
+    <span class="s1">port = message.end_port</span>
+    <span class="s2">if </span><span class="s1">chiplet_ins[next_chiplet].input_buffer &gt; len(chiplet_ins[next_chiplet].input_data[port]):</span>
+        <span class="s0"># 有空间，发送credit消息</span>
+        <span class="s1">message_add = copy.deepcopy(message)</span>
+        <span class="s1">message_add.data_type = </span><span class="s3">3</span>
+        <span class="s1">message_add.data_src = next_chiplet</span>
+        <span class="s2">if </span><span class="s1">next_chiplet == dst_chiplet:</span>
+            <span class="s1">message_add.next_chiplet = dst_chiplet</span>
+            <span class="s1">message_add.src_port = message.end_port</span>
+            <span class="s1">message_add.end_port = message.end_port</span>
+        <span class="s2">else</span><span class="s1">:</span>
+            <span class="s1">message_add.next_chiplet = path_src_dst[(next_chiplet</span><span class="s2">, </span><span class="s1">dst_chiplet)][</span><span class="s3">1</span><span class="s1">]</span>
+            <span class="s1">message_add.src_port = phy_neibors[(message_add.data_src</span><span class="s2">, </span><span class="s1">message_add.next_chiplet)][</span><span class="s3">0</span><span class="s1">]</span>
+            <span class="s1">message_add.end_port = phy_neibors[(message_add.data_src</span><span class="s2">, </span><span class="s1">message_add.next_chiplet)][</span><span class="s3">1</span><span class="s1">]</span>
+
+        <span class="s1">message_add.data_time += get_path_delay(src_chiplet</span><span class="s2">, </span><span class="s1">next_chiplet</span><span class="s2">, </span><span class="s1">router_map) * </span><span class="s3">2 </span><span class="s1">+ phy_latency[next_chiplet]</span>
+        <span class="s1">chiplet_ins[next_chiplet].input_data[port].append(message_add)</span>
+        <span class="s1">send_credit(data_id=message.data_id</span><span class="s2">, </span><span class="s1">src_chiplet=next_chiplet</span><span class="s2">, </span><span class="s1">dst_chiplet=src_chiplet</span><span class="s2">,</span>
+                    <span class="s1">port_src=message.end_port</span><span class="s2">, </span><span class="s1">port_end=message.src_port</span><span class="s2">, </span><span class="s1">time=message.data_time + get_path_delay(src_chiplet</span><span class="s2">,</span><span class="s1">next_chiplet</span><span class="s2">,</span><span class="s1">router_map))</span>
+        <span class="s1">message_add.old_port = port</span>
+        <span class="s2">if </span><span class="s1">message.data_id == </span><span class="s3">1</span><span class="s1">:</span>
+            <span class="s1">print(message)</span>
+            <span class="s1">print(message_add)</span>
+        <span class="s1">event_queue.put(message_add)</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s0"># 没有空间，进行轮询，时间+1</span>
+        <span class="s1">retry_data_request(message</span><span class="s2">, </span><span class="s1">router_map)</span>
+
+
+<span class="s2">def </span><span class="s1">handle_data_request(message</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neibors):</span>
+    <span class="s2">global </span><span class="s1">event_queue</span><span class="s2">, </span><span class="s1">chiplet_ins</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s0"># 解析消息中的必要信息</span>
+    <span class="s1">src_chiplet = message.data_src</span>
+    <span class="s1">dst_chiplet = message.data_end</span>
+    <span class="s1">next_chiplet = message.next_chiplet</span>
+    <span class="s1">port = message.end_port  </span><span class="s0"># 假设这是下一跳需要检查的端口</span>
+
+    <span class="s0"># 计算到达时间，加上路径延迟</span>
+    <span class="s1">arrival_time = message.data_time + get_path_delay(src_chiplet</span><span class="s2">, </span><span class="s1">next_chiplet</span><span class="s2">, </span><span class="s1">router_map)</span>
+    <span class="s1">message.data_time = arrival_time</span>
+    <span class="s0"># chiplet_ins[message.data_src].output_data[message.src_port].append(message)</span>
+
+    <span class="s1">message.data_type = </span><span class="s3">4</span>
+    <span class="s1">event_queue.put(message)</span>
+
+
+<span class="s2">def </span><span class="s1">get_path_delay(src_chiplet</span><span class="s2">, </span><span class="s1">next_chiplet</span><span class="s2">, </span><span class="s1">router_map):</span>
+    <span class="s0"># 根据router_map获取路径延迟，这里是一个示例实现</span>
+    <span class="s0">#todo think about it</span>
+    <span class="s0"># print(src_chiplet,next_chiplet)</span>
+    <span class="s2">if </span><span class="s1">src_chiplet == next_chiplet:</span>
+        <span class="s2">return </span><span class="s3">0</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s2">return </span><span class="s1">edge_latencies[src_chiplet][next_chiplet]</span>
+
+
+<span class="s2">def </span><span class="s1">send_credit(data_id</span><span class="s2">, </span><span class="s1">src_chiplet</span><span class="s2">, </span><span class="s1">dst_chiplet</span><span class="s2">, </span><span class="s1">port_src</span><span class="s2">, </span><span class="s1">port_end</span><span class="s2">, </span><span class="s1">time):</span>
+    <span class="s0"># 构建并发送credit消息</span>
+    <span class="s2">global </span><span class="s1">event_queue</span>
+    <span class="s1">credit_msg = message(</span>
+        <span class="s1">data_type=</span><span class="s3">0</span><span class="s2">,  </span><span class="s0"># credit消息类型为0</span>
+        <span class="s1">data_src=src_chiplet</span><span class="s2">,</span>
+        <span class="s1">data_end=dst_chiplet</span><span class="s2">,</span>
+        <span class="s1">data_time=time</span><span class="s2">,</span>
+        <span class="s1">src_port=port_src</span><span class="s2">,</span>
+        <span class="s1">end_port=port_end</span><span class="s2">,</span>
+        <span class="s1">data_id=data_id</span>
+    <span class="s1">)</span>
+    <span class="s1">event_queue.put(credit_msg)</span>
+
+
+<span class="s2">def </span><span class="s1">retry_data_request(message</span><span class="s2">, </span><span class="s1">router_map):</span>
+    <span class="s2">global </span><span class="s1">waiting</span>
+    <span class="s0"># 增加时间后重新放入事件队列进行轮询</span>
+    <span class="s1">message.data_time += </span><span class="s3">1  </span><span class="s0"># 时间+1</span>
+    <span class="s1">waiting += </span><span class="s3">1</span>
+    <span class="s1">event_queue.put(message)</span>
+
+
+<span class="s0"># 零事件之后的操作</span>
+<span class="s2">def </span><span class="s1">release_output_buffer(top_event</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neighbors):</span>
+    <span class="s2">global </span><span class="s1">event_queue</span><span class="s2">, </span><span class="s1">chiplet_ins</span>
+    <span class="s0"># 从top_event获取必要的信息</span>
+    <span class="s1">data_id = top_event.data_id</span>
+    <span class="s1">found = </span><span class="s2">False</span>
+    <span class="s1">chiplet_src = top_event.data_src</span>
+    <span class="s1">chiplet_end = top_event.data_end</span>
+    <span class="s1">port_src = top_event.src_port</span>
+    <span class="s1">port_end = top_event.end_port</span>
+    <span class="s0"># 遍历所有chiplet实例中的输出数据</span>
+
+    <span class="s2">for </span><span class="s1">i</span><span class="s2">, </span><span class="s1">message </span><span class="s2">in </span><span class="s1">enumerate(chiplet_ins[chiplet_end].output_data[port_end]):</span>
+        <span class="s2">if </span><span class="s1">message.data_id == data_id:</span>
+            <span class="s0"># 找到了需要处理的消息</span>
+            <span class="s0"># 创建新的消息对象，这里我们直接修改top_event作为示例</span>
+            <span class="s0"># 实际上，您可能需要根据需要创建一个全新的消息对象</span>
+            <span class="s0"># message_new = new_message_by_credit(message, router_map, top_event.data_time, phy_neighbors)</span>
+
+            <span class="s0"># 将新消息放入全局事件队列</span>
+            <span class="s0"># event_queue.put(message_new)</span>
+            <span class="s0"># 从输出数据中删除找到的消息</span>
+            <span class="s2">del </span><span class="s1">chiplet_ins[chiplet_end].output_data[port_end][i]</span>
+            <span class="s1">found = </span><span class="s2">True</span>
+            <span class="s2">break  </span><span class="s0"># 找到后即退出循环</span>
+    <span class="s2">if not </span><span class="s1">found:</span>
+        <span class="s1">print(</span><span class="s4">f'Could not find the data with data_id: </span><span class="s2">{</span><span class="s1">data_id</span><span class="s2">}</span><span class="s4">'</span><span class="s1">)</span>
+
+
+<span class="s2">def </span><span class="s1">new_message_by_credit(message_credit</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">credit_time</span><span class="s2">, </span><span class="s1">phy_neighbors):</span>
+    <span class="s2">global </span><span class="s1">chiplet_ins</span>
+    <span class="s0"># global data_id</span>
+    <span class="s0"># 解包router_map中的各个组件</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">dst_chiplet = message_credit.data_end</span>
+    <span class="s1">src_chiplet = message_credit.data_src</span>
+    <span class="s1">next_chiplet = message_credit.next_chiplet</span>
+
+    <span class="s0"># 使用新的方法来获取当前芯片到下一个芯片的边缘延迟</span>
+    <span class="s0"># edge_latencies是一个列表，每个元素是一个字典，表示当前节点到其邻居的延迟</span>
+    <span class="s0">#todo think about it</span>
+    <span class="s1">latency_to_next_chiplet = edge_latencies[src_chiplet][next_chiplet] </span><span class="s2">if </span><span class="s1">src_chiplet != next_chiplet </span><span class="s2">else </span><span class="s3">0</span>
+
+    <span class="s0"># 更新数据时间，包括边缘延迟和物理延迟</span>
+    <span class="s1">data_time = credit_time + latency_to_next_chiplet + phy_latency[next_chiplet]</span>
+    <span class="s0"># print(&quot;new_message_credit&quot;)</span>
+    <span class="s1">port_id = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">next_chiplet == dst_chiplet:</span>
+        <span class="s1">port_id = (message_credit.end_port</span><span class="s2">,</span><span class="s1">message_credit.end_port)</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s1">port_id = phy_neighbors[(next_chiplet</span><span class="s2">, </span><span class="s1">path_src_dst[(next_chiplet</span><span class="s2">, </span><span class="s1">dst_chiplet)][</span><span class="s3">1</span><span class="s1">])]</span>
+    <span class="s0"># 创建新的消息对象，完成data_time参数的填充</span>
+    <span class="s1">message_new = message(data_id=message_credit.data_id</span><span class="s2">, </span><span class="s1">data_src=next_chiplet</span><span class="s2">, </span><span class="s1">data_end=dst_chiplet</span><span class="s2">,</span>
+                          <span class="s1">next_chiplet=path_src_dst[(next_chiplet</span><span class="s2">, </span><span class="s1">dst_chiplet)][</span><span class="s3">1</span><span class="s1">]</span>
+                          <span class="s2">if </span><span class="s1">next_chiplet != dst_chiplet </span><span class="s2">else </span><span class="s1">dst_chiplet</span><span class="s2">,</span>
+                          <span class="s1">data_type=</span><span class="s3">3</span><span class="s2">,</span>
+                          <span class="s1">data_size=message_credit.data_size</span><span class="s2">,</span>
+                          <span class="s1">data_time=data_time</span><span class="s2">,</span>
+                          <span class="s1">src_port=port_id[</span><span class="s3">0</span><span class="s1">]</span><span class="s2">,</span>
+                          <span class="s1">end_port=port_id[</span><span class="s3">1</span><span class="s1">])</span>
+    <span class="s0"># todo error</span>
+    <span class="s0"># 这里可以添加代码，例如将message_new添加到输出缓冲区等</span>
+    <span class="s2">return </span><span class="s1">message_new</span>
+
+    <span class="s0"># 注意：这段代码可能需要根据您的具体实现进行调整</span>
+
+
+<span class="s0"># 当数据进入缓冲区后，向下一跳发送请求信息</span>
+<span class="s2">def </span><span class="s1">creat_quest_message(message_output</span><span class="s2">, </span><span class="s1">router_map):</span>
+    <span class="s0"># 解包router_map中的各个组件</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+
+    <span class="s0"># 从message_output中获取必要的信息</span>
+    <span class="s1">src_chiplet = message_output.data_src</span>
+    <span class="s1">next_chiplet = message_output.next_chiplet</span>
+    <span class="s1">end_chiplet = message_output.data_end</span>
+    <span class="s1">data_time = message_output.data_time + edge_latencies[src_chiplet][next_chiplet]</span>
+
+    <span class="s0"># 假设消息类型为2表示准备好接收信息的消息</span>
+    <span class="s0"># 注意：这里的message构造函数参数应该与您定义的message类匹配</span>
+    <span class="s1">quest_message = message(data_id=message_output.data_id</span><span class="s2">, </span><span class="s1">data_src=src_chiplet</span><span class="s2">, </span><span class="s1">data_end=end_chiplet</span><span class="s2">,</span>
+                            <span class="s1">next_chiplet=next_chiplet</span><span class="s2">, </span><span class="s1">data_type=</span><span class="s3">2</span><span class="s2">, </span><span class="s1">data_size=message_output.data_size</span><span class="s2">,</span>
+                            <span class="s1">data_time=data_time</span><span class="s2">, </span><span class="s1">src_port=message_output.src_port</span><span class="s2">, </span><span class="s1">end_port=message_output.end_port)</span>
+
+    <span class="s2">return </span><span class="s1">quest_message</span>
+
+
+<span class="s2">def </span><span class="s1">ask_output_buffer(message_output</span><span class="s2">, </span><span class="s1">router_map):</span>
+    <span class="s2">global </span><span class="s1">chiplet_ins</span><span class="s2">, </span><span class="s1">event_queue</span><span class="s2">,</span><span class="s1">waiting</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">src_chiplet = message_output.data_src</span>
+    <span class="s1">src_port = message_output.src_port  </span><span class="s0"># 获取源端口号</span>
+
+    <span class="s0"># 检查输出缓冲区是否有足够的空间</span>
+    <span class="s2">if </span><span class="s1">len(chiplet_ins[src_chiplet].output_data[src_port]) &lt; chiplet_ins[src_chiplet].output_buffer:</span>
+        <span class="s0"># 如果有足够的空间，将消息放入src_chiplet的输入缓冲区</span>
+        <span class="s1">chiplet_ins[src_chiplet].output_data[src_port].append(message_output)</span>
+        <span class="s0"># print('*******************************************')</span>
+        <span class="s0"># for x in chiplet_ins[src_chiplet].output_data[src_port]:</span>
+        <span class="s0">#     print(x)</span>
+        <span class="s0"># print('*******************************************')</span>
+        <span class="s0"># 假设每个chiplet_instance有一个input_buffer_count属性来跟踪输入缓冲区中的消息数量</span>
+        <span class="s0"># 如果有足够的空间，创建新的消息，data_type为2</span>
+        <span class="s1">new_message = message(</span>
+            <span class="s1">data_id=message_output.data_id</span><span class="s2">,</span>
+            <span class="s1">data_src=message_output.data_src</span><span class="s2">,</span>
+            <span class="s1">data_end=message_output.data_end</span><span class="s2">,</span>
+            <span class="s1">next_chiplet=message_output.next_chiplet</span><span class="s2">,</span>
+            <span class="s1">data_type=</span><span class="s3">2</span><span class="s2">,  </span><span class="s0"># 设置新消息的类型为2</span>
+            <span class="s1">data_size=message_output.data_size</span><span class="s2">,</span>
+            <span class="s1">data_time=message_output.data_time + phy_latency[src_chiplet]</span><span class="s2">,  </span><span class="s0"># 增加物理延迟</span>
+            <span class="s1">src_port=message_output.src_port</span><span class="s2">,</span>
+            <span class="s1">end_port=message_output.end_port</span>
+        <span class="s1">)</span>
+        <span class="s1">event_queue.put(new_message)  </span><span class="s0"># 将新消息加入到事件队列中</span>
+
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s0"># 如果没有足够的空间，将data_time增加1后，把消息放回event_queue中</span>
+        <span class="s1">message_output.data_time += </span><span class="s3">1</span>
+        <span class="s1">waiting += </span><span class="s3">1</span>
+        <span class="s1">event_queue.put(message_output)</span>
+
+
+<span class="s0">##################################################################</span>
+<span class="s0"># Compute the area summary</span>
+<span class="s2">def </span><span class="s1">compute_area_summary(chiplets</span><span class="s2">, </span><span class="s1">placement):</span>
+    <span class="s1">total_chiplet_area = </span><span class="s3">0</span>
+    <span class="s0"># Smallest and largest coordinates occupied by a chiplet</span>
+    <span class="s1">(minx</span><span class="s2">, </span><span class="s1">miny</span><span class="s2">, </span><span class="s1">maxx</span><span class="s2">, </span><span class="s1">maxy) = (float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">)</span><span class="s2">, </span><span class="s1">float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">)</span><span class="s2">, </span><span class="s1">-float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">)</span><span class="s2">, </span><span class="s1">-float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">))</span>
+    <span class="s0"># Iterate through chiplets</span>
+    <span class="s2">for </span><span class="s1">chiplet_desc </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]:</span>
+        <span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])  </span><span class="s0"># Position</span>
+        <span class="s1">(w</span><span class="s2">, </span><span class="s1">h) = (chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])  </span><span class="s0"># Dimensions</span>
+        <span class="s0"># Add this chiplet's are to total area</span>
+        <span class="s1">total_chiplet_area += (w * h)</span>
+        <span class="s0"># Update min and max coordinates</span>
+        <span class="s1">minx = min(minx</span><span class="s2">, </span><span class="s1">x)</span>
+        <span class="s1">miny = min(miny</span><span class="s2">, </span><span class="s1">y)</span>
+        <span class="s1">maxx = max(maxx</span><span class="s2">, </span><span class="s1">x + w)</span>
+        <span class="s1">maxy = max(maxy</span><span class="s2">, </span><span class="s1">y + h)</span>
+    <span class="s0"># Compute total interposer area</span>
+    <span class="s1">chip_width = (maxx - minx)</span>
+    <span class="s1">chip_height = (maxy - miny)</span>
+    <span class="s1">total_interposer_area = chip_width * chip_height</span>
+    <span class="s1">area_summary = {</span>
+        <span class="s4">&quot;chip_width&quot;</span><span class="s1">: chip_width</span><span class="s2">,</span>
+        <span class="s4">&quot;chip_height&quot;</span><span class="s1">: chip_height</span><span class="s2">,</span>
+        <span class="s4">&quot;total_chiplet_area&quot;</span><span class="s1">: total_chiplet_area</span><span class="s2">,</span>
+        <span class="s4">&quot;total_interposer_area&quot;</span><span class="s1">: total_interposer_area</span>
+    <span class="s1">}</span>
+    <span class="s2">return </span><span class="s1">area_summary</span>
+
+
+<span class="s0"># Compute the power summary</span>
+<span class="s2">def </span><span class="s1">compute_power_summary(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging):</span>
+    <span class="s0"># Compute power consumption of chiplets</span>
+    <span class="s1">total_chiplet_power = </span><span class="s3">0</span>
+    <span class="s2">for </span><span class="s1">chiplet_desc </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]:</span>
+        <span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">total_chiplet_power += chiplet[</span><span class="s4">&quot;power&quot;</span><span class="s1">]</span>
+    <span class="s0"># Compute power consumption of interposer routers</span>
+    <span class="s1">total_interposer_power = (len(placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">]) * packaging[</span><span class="s4">&quot;power_irouter&quot;</span><span class="s1">]) </span><span class="s2">if </span><span class="s1">packaging[</span>
+        <span class="s4">&quot;is_active&quot;</span><span class="s1">] </span><span class="s2">else </span><span class="s3">0</span>
+    <span class="s0"># Compute total interposer area</span>
+    <span class="s1">total_power = total_chiplet_power + total_interposer_power</span>
+    <span class="s1">power_summary = {</span>
+        <span class="s4">&quot;total_power&quot;</span><span class="s1">: total_power</span><span class="s2">,</span>
+        <span class="s4">&quot;total_chiplet_power&quot;</span><span class="s1">: total_chiplet_power</span><span class="s2">,</span>
+        <span class="s4">&quot;total_interposer_power&quot;</span><span class="s1">: total_interposer_power</span>
+    <span class="s1">}</span>
+    <span class="s2">return </span><span class="s1">power_summary</span>
+
+
+<span class="s0"># Compute all link lengths</span>
+<span class="s2">def </span><span class="s1">compute_link_summary(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging):</span>
+    <span class="s1">link_lengths = []</span>
+    <span class="s1">link_lengths_internal = {}</span>
+    <span class="s2">for </span><span class="s1">link </span><span class="s2">in </span><span class="s1">topology:</span>
+        <span class="s1">endpoints = [link[</span><span class="s4">&quot;ep1&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">link[</span><span class="s4">&quot;ep2&quot;</span><span class="s1">]]</span>
+        <span class="s0"># Compute positions of start-and endpoint</span>
+        <span class="s1">positions = []</span>
+        <span class="s1">node_ids = []</span>
+        <span class="s2">for </span><span class="s1">endpoint </span><span class="s2">in </span><span class="s1">endpoints:</span>
+            <span class="s2">if </span><span class="s1">endpoint[</span><span class="s4">&quot;type&quot;</span><span class="s1">] == </span><span class="s4">&quot;chiplet&quot;</span><span class="s1">:</span>
+                <span class="s1">chiplet_desc = placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][endpoint[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]]</span>
+                <span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+                <span class="s0"># Rotate the chiplet if needed</span>
+                <span class="s1">chiplet = hlp.rotate_chiplet(chiplet</span><span class="s2">, </span><span class="s1">chiplet_desc[</span><span class="s4">&quot;rotation&quot;</span><span class="s1">])</span>
+                <span class="s1">phy = chiplet[</span><span class="s4">&quot;phys&quot;</span><span class="s1">][endpoint[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]]</span>
+                <span class="s1">positions.append((chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">] + phy[</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">] + phy[</span><span class="s4">&quot;y&quot;</span><span class="s1">]))</span>
+                <span class="s1">node_ids.append(endpoint[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">])</span>
+            <span class="s2">else</span><span class="s1">:</span>
+                <span class="s1">irouter = placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">][endpoint[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]]</span>
+                <span class="s1">positions.append((irouter[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">irouter[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">]))</span>
+                <span class="s1">node_ids.append(len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]) + endpoint[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">])</span>
+        <span class="s0"># Compute link length</span>
+        <span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_routing&quot;</span><span class="s1">] == </span><span class="s4">&quot;manhattan&quot;</span><span class="s1">:</span>
+            <span class="s1">length = sum([abs(positions[</span><span class="s3">0</span><span class="s1">][dim] - positions[</span><span class="s3">1</span><span class="s1">][dim]) </span><span class="s2">for </span><span class="s1">dim </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">2</span><span class="s1">)])</span>
+            <span class="s1">link_lengths.append(length)</span>
+            <span class="s1">link_lengths_internal[tuple(node_ids)] = length</span>
+            <span class="s1">link_lengths_internal[tuple(reversed(node_ids))] = length</span>
+        <span class="s2">elif </span><span class="s1">packaging[</span><span class="s4">&quot;link_routing&quot;</span><span class="s1">] == </span><span class="s4">&quot;euclidean&quot;</span><span class="s1">:</span>
+            <span class="s0"># todo: fault about euclidean</span>
+            <span class="s1">length = math.sqrt(sum([abs(positions[</span><span class="s3">0</span><span class="s1">][dim] - positions[</span><span class="s3">1</span><span class="s1">][dim]) </span><span class="s2">for </span><span class="s1">dim </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">2</span><span class="s1">)]))</span>
+            <span class="s1">link_lengths.append(length)</span>
+            <span class="s1">link_lengths_internal[tuple(node_ids)] = length</span>
+            <span class="s1">link_lengths_internal[tuple(reversed(node_ids))] = length</span>
+    <span class="s0"># Summarize link lengths</span>
+    <span class="s1">link_summary = {</span>
+        <span class="s4">&quot;avg&quot;</span><span class="s1">: sum(link_lengths) / len(link_lengths)</span><span class="s2">,</span>
+        <span class="s4">&quot;min&quot;</span><span class="s1">: min(link_lengths)</span><span class="s2">,</span>
+        <span class="s4">&quot;max&quot;</span><span class="s1">: max(link_lengths)</span><span class="s2">,</span>
+        <span class="s4">&quot;all&quot;</span><span class="s1">: link_lengths</span>
+    <span class="s1">}</span>
+    <span class="s2">return </span><span class="s1">(link_summary</span><span class="s2">, </span><span class="s1">link_lengths_internal)</span>
+
+
+<span class="s0"># Compute the manufacturing cost estimate</span>
+<span class="s2">def </span><span class="s1">compute_manufacturing_cost(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">area_summary):</span>
+    <span class="s0"># First, compute the manufacturing cost per chiplet</span>
+    <span class="s1">results_per_chiplet = {}</span>
+    <span class="s2">for </span><span class="s1">chiplet_name </span><span class="s2">in </span><span class="s1">set([x[</span><span class="s4">&quot;name&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]]):</span>
+        <span class="s1">results_per_chiplet[chiplet_name] = {}</span>
+        <span class="s1">chiplet = chiplets[chiplet_name]</span>
+        <span class="s1">tech = technology[chiplet[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]]</span>
+        <span class="s1">wr = tech[</span><span class="s4">&quot;wafer_radius&quot;</span><span class="s1">]  </span><span class="s0"># Wafer radius</span>
+        <span class="s1">dd = tech[</span><span class="s4">&quot;defect_density&quot;</span><span class="s1">]  </span><span class="s0"># Defect density</span>
+        <span class="s1">wc = tech[</span><span class="s4">&quot;wafer_cost&quot;</span><span class="s1">]  </span><span class="s0"># Wafer cost</span>
+        <span class="s1">ca = chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">] * chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">]  </span><span class="s0"># Chiplet area</span>
+        <span class="s0"># Dies per wafer</span>
+        <span class="s1">dies_per_wafer = int(math.floor(((math.pi * wr ** </span><span class="s3">2</span><span class="s1">) / ca) - ((math.pi * </span><span class="s3">2 </span><span class="s1">* wr) / math.sqrt(</span><span class="s3">2 </span><span class="s1">* ca))))</span>
+        <span class="s1">results_per_chiplet[chiplet_name][</span><span class="s4">&quot;dies_per_wafer&quot;</span><span class="s1">] = dies_per_wafer</span>
+        <span class="s0"># Manufacturing yield</span>
+        <span class="s1">manufacturing_yield = </span><span class="s3">1.0 </span><span class="s1">/ (</span><span class="s3">1.0 </span><span class="s1">+ dd * ca)</span>
+        <span class="s1">results_per_chiplet[chiplet_name][</span><span class="s4">&quot;manufacturing_yield&quot;</span><span class="s1">] = manufacturing_yield</span>
+        <span class="s0"># Known good dies</span>
+        <span class="s1">known_good_dies = dies_per_wafer * manufacturing_yield</span>
+        <span class="s1">results_per_chiplet[chiplet_name][</span><span class="s4">&quot;known_good_dies&quot;</span><span class="s1">] = known_good_dies</span>
+        <span class="s0"># Cost</span>
+        <span class="s1">cost = wc / known_good_dies</span>
+        <span class="s1">results_per_chiplet[chiplet_name][</span><span class="s4">&quot;cost&quot;</span><span class="s1">] = cost</span>
+    <span class="s0"># Next, compute the manufacturing cost of the interposer if an interposer is used</span>
+    <span class="s1">results_interposer = {</span><span class="s4">&quot;cost&quot;</span><span class="s1">: </span><span class="s3">0</span><span class="s1">}</span>
+    <span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;has_interposer&quot;</span><span class="s1">]:</span>
+        <span class="s1">ip_tech = technology[packaging[</span><span class="s4">&quot;interposer_technology&quot;</span><span class="s1">]]</span>
+        <span class="s1">wr = ip_tech[</span><span class="s4">&quot;wafer_radius&quot;</span><span class="s1">]  </span><span class="s0"># Wafer radius</span>
+        <span class="s1">dd = ip_tech[</span><span class="s4">&quot;defect_density&quot;</span><span class="s1">]  </span><span class="s0"># Defect density</span>
+        <span class="s1">wc = ip_tech[</span><span class="s4">&quot;wafer_cost&quot;</span><span class="s1">]  </span><span class="s0"># Wafer cost</span>
+        <span class="s1">ia = area_summary[</span><span class="s4">&quot;total_interposer_area&quot;</span><span class="s1">]  </span><span class="s0"># Interposer area</span>
+        <span class="s0"># Dies per wafer</span>
+        <span class="s1">dies_per_wafer = int(math.floor(((math.pi * wr ** </span><span class="s3">2</span><span class="s1">) / ia) - ((math.pi * </span><span class="s3">2 </span><span class="s1">* wr) / math.sqrt(</span><span class="s3">2 </span><span class="s1">* ia))))</span>
+        <span class="s1">results_interposer[</span><span class="s4">&quot;dies_per_wafer&quot;</span><span class="s1">] = dies_per_wafer</span>
+        <span class="s0"># Manufacturing yield</span>
+        <span class="s1">manufacturing_yield = </span><span class="s3">1.0 </span><span class="s1">/ (</span><span class="s3">1.0 </span><span class="s1">+ dd * ia)</span>
+        <span class="s1">results_interposer[</span><span class="s4">&quot;manufacturing_yield&quot;</span><span class="s1">] = manufacturing_yield</span>
+        <span class="s0"># Known good dies</span>
+        <span class="s1">known_good_dies = dies_per_wafer * manufacturing_yield</span>
+        <span class="s1">results_interposer[</span><span class="s4">&quot;known_good_dies&quot;</span><span class="s1">] = known_good_dies</span>
+        <span class="s0"># Cost</span>
+        <span class="s1">cost = wc / known_good_dies</span>
+        <span class="s1">results_interposer[</span><span class="s4">&quot;cost&quot;</span><span class="s1">] = cost</span>
+    <span class="s0"># Compute the overall cost per working chip</span>
+    <span class="s1">py = packaging[</span><span class="s4">&quot;packaging_yield&quot;</span><span class="s1">]  </span><span class="s0"># Packaging yield</span>
+    <span class="s1">total_cost = (sum([results_per_chiplet[x[</span><span class="s4">&quot;name&quot;</span><span class="s1">]][</span><span class="s4">&quot;cost&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]]) + results_interposer[</span>
+        <span class="s4">&quot;cost&quot;</span><span class="s1">]) / py</span>
+    <span class="s2">return </span><span class="s1">{</span><span class="s4">&quot;total_cost&quot;</span><span class="s1">: total_cost</span><span class="s2">, </span><span class="s4">&quot;interposer&quot;</span><span class="s1">: results_interposer</span><span class="s2">, </span><span class="s4">&quot;chiplets&quot;</span><span class="s1">: results_per_chiplet}</span>
+
+
+<span class="s0"># Constructs a graph where nodes are chiplets and interposer-routers and edges are links.</span>
+<span class="s2">def </span><span class="s1">construct_ici_graph(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology):</span>
+    <span class="s1">c = len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])  </span><span class="s0"># Number of chiplets</span>
+    <span class="s1">r = len(placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">])  </span><span class="s0"># Number of interposer-routers</span>
+    <span class="s1">n = c + r  </span><span class="s0"># Number of nodes in the graph</span>
+    <span class="s0"># Construct adjacency list</span>
+    <span class="s1">neighbors = [[] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">phy_neighbors = {}</span>
+    <span class="s0"># Iterate through links</span>
+    <span class="s2">for </span><span class="s1">link </span><span class="s2">in </span><span class="s1">topology:</span>
+        <span class="s1">nid1 = (c </span><span class="s2">if </span><span class="s1">link[</span><span class="s4">&quot;ep1&quot;</span><span class="s1">][</span><span class="s4">&quot;type&quot;</span><span class="s1">] == </span><span class="s4">&quot;irouter&quot; </span><span class="s2">else </span><span class="s3">0</span><span class="s1">) + link[</span><span class="s4">&quot;ep1&quot;</span><span class="s1">][</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span>
+        <span class="s1">nid2 = (c </span><span class="s2">if </span><span class="s1">link[</span><span class="s4">&quot;ep2&quot;</span><span class="s1">][</span><span class="s4">&quot;type&quot;</span><span class="s1">] == </span><span class="s4">&quot;irouter&quot; </span><span class="s2">else </span><span class="s3">0</span><span class="s1">) + link[</span><span class="s4">&quot;ep2&quot;</span><span class="s1">][</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span>
+        <span class="s1">phy_nid1 = link[</span><span class="s4">&quot;ep1&quot;</span><span class="s1">][</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span>
+        <span class="s1">phy_nid2 = link[</span><span class="s4">&quot;ep2&quot;</span><span class="s1">][</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span>
+        <span class="s1">phy_neighbors[(nid1</span><span class="s2">, </span><span class="s1">nid2)] = (phy_nid1</span><span class="s2">, </span><span class="s1">phy_nid2)</span>
+        <span class="s1">phy_neighbors[(nid2</span><span class="s2">, </span><span class="s1">nid1)] = (phy_nid2</span><span class="s2">, </span><span class="s1">phy_nid1)</span>
+        <span class="s0"># print(nid1,nid2)</span>
+        <span class="s1">neighbors[nid1].append(nid2)</span>
+        <span class="s1">neighbors[nid2].append(nid1)</span>
+    <span class="s0"># Collect node attributes...</span>
+    <span class="s1">relay_map = [</span><span class="s2">None for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">nodes_by_type = {</span><span class="s4">&quot;C&quot;</span><span class="s1">: []</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s1">: []</span><span class="s2">, </span><span class="s4">&quot;I&quot;</span><span class="s1">: []}</span>
+    <span class="s0"># ... for chiplets</span>
+    <span class="s2">for </span><span class="s1">nid </span><span class="s2">in </span><span class="s1">range(c):</span>
+        <span class="s1">chiplet = chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][nid][</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">typ = chiplet[</span><span class="s4">&quot;type&quot;</span><span class="s1">][</span><span class="s3">0</span><span class="s1">].upper()</span>
+        <span class="s1">relay_map[nid] = chiplet[</span><span class="s4">&quot;relay&quot;</span><span class="s1">]</span>
+        <span class="s1">nodes_by_type[typ].append(nid)</span>
+    <span class="s0"># ... for interposer-routers</span>
+    <span class="s2">for </span><span class="s1">nid </span><span class="s2">in </span><span class="s1">range(c</span><span class="s2">, </span><span class="s1">c + r):</span>
+        <span class="s1">relay_map[nid] = </span><span class="s2">True</span>
+    <span class="s0"># Return graph</span>
+    <span class="s2">return </span><span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors)</span>
+
+
+<span class="s0"># Computes a full source-destination path for each combination of sending and receiving chiplets in the following</span>
+<span class="s0"># traffic classes: core-&gt;core, core-&gt;memory, core-&gt;io, memory-&gt;io</span>
+<span class="s2">def </span><span class="s1">construct_ici_routing(ici_graph</span><span class="s2">, </span><span class="s1">routing):</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s0"># Compute a routing per traffic-class.</span>
+    <span class="s1">classes = [</span><span class="s4">&quot;C2C&quot;</span><span class="s2">, </span><span class="s4">&quot;C2M&quot;</span><span class="s2">, </span><span class="s4">&quot;C2I&quot;</span><span class="s2">, </span><span class="s4">&quot;M2I&quot;</span><span class="s1">]</span>
+    <span class="s0"># The following two dictionaries are the result of this function - they fully determine the routing</span>
+    <span class="s1">paths_per_class = {cls: {} </span><span class="s2">for </span><span class="s1">cls </span><span class="s2">in </span><span class="s1">classes}</span>
+    <span class="s1">n_paths_per_edge_per_class = {cls: {(src</span><span class="s2">, </span><span class="s1">dst): </span><span class="s3">0 </span><span class="s2">for </span><span class="s1">src </span><span class="s2">in </span><span class="s1">range(n) </span><span class="s2">for </span><span class="s1">dst </span><span class="s2">in </span><span class="s1">neighbors[src]} </span><span class="s2">for </span><span class="s1">cls </span><span class="s2">in </span><span class="s1">classes}</span>
+    <span class="s0"># Cover all traffic classes without running Dijkstra twice on the same start-vertex</span>
+    <span class="s1">src_types = [</span><span class="s4">&quot;C&quot;</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s1">]</span>
+    <span class="s1">dst_types_by_src_type = {</span><span class="s4">&quot;C&quot;</span><span class="s1">: [</span><span class="s4">&quot;C&quot;</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s2">, </span><span class="s4">&quot;I&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s1">: [</span><span class="s4">&quot;I&quot;</span><span class="s1">]}</span>
+    <span class="s2">for </span><span class="s1">src_type </span><span class="s2">in </span><span class="s1">src_types:</span>
+        <span class="s0"># Run Dijkstra for each sending node in a given traffic class</span>
+        <span class="s0"># We minimize the number of hops, not the latency.</span>
+        <span class="s2">for </span><span class="s1">src </span><span class="s2">in </span><span class="s1">nodes_by_type[src_type]:</span>
+            <span class="s1">dist = [float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]  </span><span class="s0"># Distance from SRC in hops</span>
+            <span class="s1">preds = [[] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]  </span><span class="s0"># Predecessors (can be many for multiple shortest paths)</span>
+            <span class="s1">todo = queue.PriorityQueue()  </span><span class="s0"># Visited but not yet processed nodes</span>
+            <span class="s1">dist[src] = </span><span class="s3">0</span>
+            <span class="s1">todo.put((</span><span class="s3">0</span><span class="s2">, </span><span class="s1">src))</span>
+            <span class="s0"># Explore paths from src to all chiplets</span>
+            <span class="s2">while </span><span class="s1">todo.qsize() &gt; </span><span class="s3">0</span><span class="s1">:</span>
+                <span class="s1">(cur_dist</span><span class="s2">, </span><span class="s1">cur) = todo.get()</span>
+                <span class="s0"># A shorter path to the cur-node has been found -&gt; skip</span>
+                <span class="s2">if </span><span class="s1">cur_dist &gt; dist[cur]:</span>
+                    <span class="s2">continue</span>
+                <span class="s0"># Iterate through neighbors of the cur-node</span>
+                <span class="s2">for </span><span class="s1">nei </span><span class="s2">in </span><span class="s1">neighbors[cur]:</span>
+                    <span class="s1">nei_dist = cur_dist + </span><span class="s3">1</span>
+                    <span class="s0"># We found a path to nei that is shorter than the currently best known one</span>
+                    <span class="s2">if </span><span class="s1">nei_dist &lt; dist[nei]:</span>
+                        <span class="s1">dist[nei] = nei_dist</span>
+                        <span class="s1">preds[nei] = [cur]</span>
+                        <span class="s0"># Only enqueue the &quot;nei&quot;-node for processing if it can relay traffic</span>
+                        <span class="s2">if </span><span class="s1">relay_map[nei]:</span>
+                            <span class="s1">todo.put((nei_dist</span><span class="s2">, </span><span class="s1">nei))</span>
+                    <span class="s0"># We found a path equally shorter than the shortest path</span>
+                    <span class="s2">elif </span><span class="s1">(routing </span><span class="s2">in </span><span class="s1">[</span><span class="s4">&quot;random&quot;</span><span class="s2">, </span><span class="s4">&quot;balanced&quot;</span><span class="s1">]) </span><span class="s2">and </span><span class="s1">(nei_dist == dist[nei]) </span><span class="s2">and </span><span class="s1">(cur </span><span class="s2">not in </span><span class="s1">preds[nei]):</span>
+                        <span class="s1">preds[nei].append(cur)</span>
+            <span class="s0"># Use backtracking to construct all src-&gt;dst paths for the given traffic class</span>
+            <span class="s2">for </span><span class="s1">dst_type </span><span class="s2">in </span><span class="s1">dst_types_by_src_type[src_type]:</span>
+                <span class="s2">for </span><span class="s1">dst </span><span class="s2">in </span><span class="s1">nodes_by_type[dst_type]:</span>
+                    <span class="s1">cls = src_type + </span><span class="s4">&quot;2&quot; </span><span class="s1">+ dst_type</span>
+                    <span class="s0"># Only look at paths with at least one hop</span>
+                    <span class="s2">if </span><span class="s1">dst == src:</span>
+                        <span class="s2">continue</span>
+                    <span class="s1">path = [dst]</span>
+                    <span class="s1">cur = dst</span>
+                    <span class="s2">while </span><span class="s1">cur != src:</span>
+                        <span class="s0"># Balance paths across links</span>
+                        <span class="s2">if </span><span class="s1">routing == </span><span class="s4">&quot;balanced&quot;</span><span class="s1">:</span>
+                            <span class="s1">n_paths = [n_paths_per_edge[(pred</span><span class="s2">, </span><span class="s1">cur)] </span><span class="s2">for </span><span class="s1">pred </span><span class="s2">in </span><span class="s1">preds[cur]]</span>
+                            <span class="s1">pred = preds[cur][n_paths.index(min(n_paths))]</span>
+                        <span class="s0"># Randomly select shortest paths</span>
+                        <span class="s2">elif </span><span class="s1">routing == </span><span class="s4">&quot;random&quot;</span><span class="s1">:</span>
+                            <span class="s1">pred = preds[cur][rnd.randint(</span><span class="s3">0</span><span class="s2">, </span><span class="s1">len(preds[cur]) - </span><span class="s3">1</span><span class="s1">)]</span>
+                        <span class="s0"># Use the minimum index (what BookSim does)</span>
+                        <span class="s2">else</span><span class="s1">:</span>
+                            <span class="s1">pred = preds[cur][</span><span class="s3">0</span><span class="s1">]</span>
+                        <span class="s1">n_paths_per_edge_per_class[cls][(pred</span><span class="s2">, </span><span class="s1">cur)] += </span><span class="s3">1</span>
+                        <span class="s1">cur = pred</span>
+                        <span class="s1">path.insert(</span><span class="s3">0</span><span class="s2">, </span><span class="s1">cur)</span>
+                    <span class="s1">paths_per_class[cls][(src</span><span class="s2">, </span><span class="s1">dst)] = path</span>
+    <span class="s0"># Return results</span>
+    <span class="s2">return </span><span class="s1">(paths_per_class</span><span class="s2">, </span><span class="s1">n_paths_per_edge_per_class)</span>
+
+
+<span class="s0"># Compute the proxy for the ICI latency</span>
+<span class="s2">def </span><span class="s1">compute_ici_latency(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing</span><span class="s2">, </span><span class="s1">link_latencies_internal):</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s1">(paths_per_class</span><span class="s2">, </span><span class="s1">n_paths_per_edge_per_class) = ici_routing</span>
+    <span class="s1">ici_latencies = {}</span>
+    <span class="s0"># Dictionary with the latency of relaying a message through a given node</span>
+    <span class="s1">node_relay_latencies = [(packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">i &gt;= c </span><span class="s2">else </span><span class="s3">0</span><span class="s1">) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s0"># Dictionary with latencies of entering/exiting a given node</span>
+    <span class="s1">node_latencies = [</span><span class="s2">None for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(c)]</span>
+    <span class="s0"># List of dictionaries for edge latencies</span>
+    <span class="s1">edge_latencies = [{nei: (packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s4">&quot;constant&quot;</span>
+                             <span class="s2">else </span><span class="s1">int(</span>
+        <span class="s1">math.ceil(eval(packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">])(link_latencies_internal[(i</span><span class="s2">, </span><span class="s1">nei)])))) </span><span class="s2">for </span><span class="s1">nei </span><span class="s2">in </span><span class="s1">neighbors[i]} </span><span class="s2">for </span><span class="s1">i</span>
+                      <span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s0"># Iterate through chiplets</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])):</span>
+        <span class="s1">chiplet = chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][i][</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">internal_latency = chiplet[</span><span class="s4">&quot;internal_latency&quot;</span><span class="s1">]</span>
+        <span class="s1">phy_latency = technology[chiplet[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]][</span><span class="s4">&quot;phy_latency&quot;</span><span class="s1">]</span>
+        <span class="s1">node_relay_latencies[i] = internal_latency + </span><span class="s3">2 </span><span class="s1">* phy_latency</span>
+        <span class="s1">node_latencies[i] = internal_latency + phy_latency</span>
+    <span class="s0"># Iterate through traffic classes</span>
+    <span class="s2">for </span><span class="s1">traffic </span><span class="s2">in </span><span class="s1">[</span><span class="s4">&quot;C2C&quot;</span><span class="s2">, </span><span class="s4">&quot;C2M&quot;</span><span class="s2">, </span><span class="s4">&quot;C2I&quot;</span><span class="s2">, </span><span class="s4">&quot;M2I&quot;</span><span class="s1">]:</span>
+        <span class="s0"># Compute latencies of all paths in this class</span>
+        <span class="s1">latencies = []</span>
+        <span class="s2">for </span><span class="s1">(src</span><span class="s2">, </span><span class="s1">dst) </span><span class="s2">in </span><span class="s1">paths_per_class[traffic]:</span>
+            <span class="s1">path = paths_per_class[traffic][(src</span><span class="s2">, </span><span class="s1">dst)]</span>
+            <span class="s1">lat = node_latencies[path[</span><span class="s3">0</span><span class="s1">]]  </span><span class="s0"># Start-node</span>
+            <span class="s1">lat += sum([node_relay_latencies[path[i]] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">len(path) - </span><span class="s3">1</span><span class="s1">)])  </span><span class="s0"># Relaying chiplets</span>
+            <span class="s1">lat += sum([edge_latencies[path[i]][path[i + </span><span class="s3">1</span><span class="s1">]] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(path) - </span><span class="s3">1</span><span class="s1">)])  </span><span class="s0"># Link latency</span>
+            <span class="s1">lat += node_latencies[path[-</span><span class="s3">1</span><span class="s1">]]  </span><span class="s0"># End node</span>
+            <span class="s1">latencies.append(lat)</span>
+        <span class="s0"># Compute and store statistics</span>
+        <span class="s1">ici_latencies[traffic] = {}</span>
+        <span class="s2">if </span><span class="s1">len(latencies):</span>
+            <span class="s1">ici_latencies[traffic][</span><span class="s4">&quot;avg&quot;</span><span class="s1">] = sum(latencies) / len(latencies)</span>
+            <span class="s1">ici_latencies[traffic][</span><span class="s4">&quot;min&quot;</span><span class="s1">] = min(latencies)</span>
+            <span class="s1">ici_latencies[traffic][</span><span class="s4">&quot;max&quot;</span><span class="s1">] = max(latencies)</span>
+            <span class="s1">ici_latencies[traffic][</span><span class="s4">&quot;all&quot;</span><span class="s1">] = latencies</span>
+    <span class="s0"># Return results</span>
+    <span class="s2">return </span><span class="s1">ici_latencies</span>
+
+
+<span class="s0">####################################################################################################</span>
+<span class="s0"># author : jiaxuming</span>
+<span class="s0"># time : 2024/2/4/19:14</span>
+<span class="s0"># this function is to compute the router_map</span>
+<span class="s2">def </span><span class="s1">compute_router_map(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing</span><span class="s2">, </span><span class="s1">link_latencies_internal</span><span class="s2">,</span>
+                       <span class="s1">routing):</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s1">(paths_per_class</span><span class="s2">, </span><span class="s1">n_paths_per_edge_per_class) = ici_routing</span>
+    <span class="s1">phy_latency = [</span><span class="s3">0 </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">node_relay_latencies = [(packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">i &gt;= c </span><span class="s2">else </span><span class="s3">0</span><span class="s1">) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">node_internal_latency = [(packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">i &gt;= c </span><span class="s2">else </span><span class="s3">0</span><span class="s1">) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">node_latencies = [</span><span class="s2">None for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(c)]</span>
+    <span class="s1">edge_latencies = [{nei: (packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">]</span>
+                             <span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s4">&quot;constant&quot;</span>
+                             <span class="s2">else </span><span class="s1">int(math.ceil(eval(packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">])(link_latencies_internal[(i</span><span class="s2">, </span><span class="s1">nei)]))))</span>
+                       <span class="s2">for </span><span class="s1">nei </span><span class="s2">in </span><span class="s1">neighbors[i]} </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])):</span>
+        <span class="s1">chiplet = chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][i][</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">internal_latency = chiplet[</span><span class="s4">&quot;internal_latency&quot;</span><span class="s1">]</span>
+        <span class="s1">phy_latency[i] = technology[chiplet[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]][</span><span class="s4">&quot;phy_latency&quot;</span><span class="s1">]</span>
+        <span class="s1">node_relay_latencies[i] = internal_latency + </span><span class="s3">2 </span><span class="s1">* phy_latency[i]</span>
+        <span class="s1">node_latencies[i] = internal_latency + phy_latency[i]</span>
+        <span class="s1">node_internal_latency[i] = internal_latency</span>
+    <span class="s0"># all code up is to compute the latency,and then i will compute the route_map</span>
+    <span class="s1">src_types = [</span><span class="s4">&quot;C&quot;</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s1">]</span>
+    <span class="s0"># todo: I update it</span>
+    <span class="s1">dst_types_by_src_type = {</span><span class="s4">&quot;C&quot;</span><span class="s1">: [</span><span class="s4">&quot;C&quot;</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s2">, </span><span class="s4">&quot;I&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s4">&quot;M&quot;</span><span class="s1">: [</span><span class="s4">&quot;I&quot;</span><span class="s2">, </span><span class="s4">&quot;C&quot;</span><span class="s1">]}</span>
+    <span class="s1">path_src_dst = {}</span>
+    <span class="s1">dist_src_to_any = {}</span>
+    <span class="s2">for </span><span class="s1">src_type </span><span class="s2">in </span><span class="s1">src_types:</span>
+        <span class="s0"># Run Dijkstra for each sending node in a given traffic class</span>
+        <span class="s0"># We minimize the number of hops, not the latency.</span>
+        <span class="s0"># print(nodes_by_type, src_type)</span>
+        <span class="s2">for </span><span class="s1">src </span><span class="s2">in </span><span class="s1">nodes_by_type[src_type]:</span>
+            <span class="s1">dist = [float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">) </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]  </span><span class="s0"># Distance from SRC in hops</span>
+            <span class="s1">preds = [[] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]  </span><span class="s0"># Predecessors (can be many for multiple shortest paths)</span>
+            <span class="s1">todo = queue.PriorityQueue()  </span><span class="s0"># Visited but not yet processed nodes</span>
+            <span class="s1">dist[src] = </span><span class="s3">0</span>
+            <span class="s1">todo.put((</span><span class="s3">0</span><span class="s2">, </span><span class="s1">src))</span>
+            <span class="s0"># Explore paths from src to all chiplets</span>
+            <span class="s2">while </span><span class="s1">todo.qsize() &gt; </span><span class="s3">0</span><span class="s1">:</span>
+                <span class="s1">(cur_dist</span><span class="s2">, </span><span class="s1">cur) = todo.get()</span>
+                <span class="s0"># A shorter path to the cur-node has been found -&gt; skip</span>
+                <span class="s2">if </span><span class="s1">cur_dist &gt; dist[cur]:</span>
+                    <span class="s2">continue</span>
+                <span class="s1">chiplet_cur = chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][cur][</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+                <span class="s0"># Iterate through neighbors of the cur-node</span>
+                <span class="s2">for </span><span class="s1">nei </span><span class="s2">in </span><span class="s1">neighbors[cur]:</span>
+                    <span class="s1">chiplet_nei = chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][nei][</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+                    <span class="s1">len_dist = edge_latencies[cur][nei]</span>
+                    <span class="s2">if </span><span class="s1">chiplet_nei[</span><span class="s4">'type'</span><span class="s1">][</span><span class="s3">0</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">[</span><span class="s4">'i'</span><span class="s2">, </span><span class="s4">'c'</span><span class="s2">, </span><span class="s4">'m'</span><span class="s1">]:</span>
+                        <span class="s1">len_dist += packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">]</span>
+                    <span class="s2">else</span><span class="s1">:</span>
+                        <span class="s1">len_dist += chiplet_nei[</span><span class="s4">'internal_latency'</span><span class="s1">] + technology[chiplet_nei[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]][</span>
+                            <span class="s4">&quot;phy_latency&quot;</span><span class="s1">]</span>
+                    <span class="s2">if </span><span class="s1">chiplet_cur[</span><span class="s4">'type'</span><span class="s1">][</span><span class="s3">0</span><span class="s1">] </span><span class="s2">in </span><span class="s1">[</span><span class="s4">'i'</span><span class="s2">, </span><span class="s4">'c'</span><span class="s2">, </span><span class="s4">'m'</span><span class="s1">]:</span>
+                        <span class="s1">len_dist += technology[chiplet_cur[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]][</span><span class="s4">&quot;phy_latency&quot;</span><span class="s1">]</span>
+                    <span class="s2">if </span><span class="s1">len_dist + cur_dist &lt; dist[nei]:</span>
+                        <span class="s1">dist[nei] = len_dist + cur_dist</span>
+                        <span class="s1">preds[nei] = [cur]</span>
+                        <span class="s0"># Only enqueue the &quot;nei&quot;-node for processing if it can relay traffic</span>
+                        <span class="s2">if </span><span class="s1">relay_map[nei]:</span>
+                            <span class="s1">todo.put((len_dist + cur_dist</span><span class="s2">, </span><span class="s1">nei))</span>
+                    <span class="s0"># We found a path equally shorter than the shortest path</span>
+                    <span class="s2">elif </span><span class="s1">(routing </span><span class="s2">in </span><span class="s1">[</span><span class="s4">&quot;random&quot;</span><span class="s2">, </span><span class="s4">&quot;balanced&quot;</span><span class="s1">]) </span><span class="s2">and </span><span class="s1">(len_dist == dist[nei]) </span><span class="s2">and </span><span class="s1">(cur </span><span class="s2">not in </span><span class="s1">preds[nei]):</span>
+                        <span class="s1">preds[nei].append(cur)</span>
+
+            <span class="s1">dist_src_to_any[src] = dist</span>
+            <span class="s0"># Use backtracking to construct all src-&gt;dst paths for the given traffic class</span>
+            <span class="s2">for </span><span class="s1">dst_type </span><span class="s2">in </span><span class="s1">dst_types_by_src_type[src_type]:</span>
+                <span class="s2">for </span><span class="s1">dst </span><span class="s2">in </span><span class="s1">nodes_by_type[dst_type]:</span>
+                    <span class="s1">cls = src_type + </span><span class="s4">&quot;2&quot; </span><span class="s1">+ dst_type</span>
+                    <span class="s0"># Only look at paths with at least one hop</span>
+                    <span class="s2">if </span><span class="s1">dst == src:</span>
+                        <span class="s2">continue</span>
+                    <span class="s1">path = [dst]</span>
+                    <span class="s1">cur = dst</span>
+                    <span class="s2">while </span><span class="s1">cur != src:</span>
+                        <span class="s0"># Balance paths across links</span>
+                        <span class="s2">if </span><span class="s1">routing == </span><span class="s4">&quot;balanced&quot;</span><span class="s1">:</span>
+                            <span class="s1">n_paths = [n_paths_per_edge[(pred</span><span class="s2">, </span><span class="s1">cur)] </span><span class="s2">for </span><span class="s1">pred </span><span class="s2">in </span><span class="s1">preds[cur]]</span>
+                            <span class="s1">pred = preds[cur][n_paths.index(min(n_paths))]</span>
+                        <span class="s0"># Randomly select shortest paths</span>
+                        <span class="s2">elif </span><span class="s1">routing == </span><span class="s4">&quot;random&quot;</span><span class="s1">:</span>
+                            <span class="s1">pred = preds[cur][rnd.randint(</span><span class="s3">0</span><span class="s2">, </span><span class="s1">len(preds[cur]) - </span><span class="s3">1</span><span class="s1">)]</span>
+                        <span class="s0"># Use the minimum index (what BookSim does)</span>
+                        <span class="s2">else</span><span class="s1">:</span>
+                            <span class="s1">pred = preds[cur][</span><span class="s3">0</span><span class="s1">]</span>
+                        <span class="s0"># n_paths_per_edge_per_class[cls][(pred, cur)] += 1</span>
+                        <span class="s1">cur = pred</span>
+                        <span class="s1">path.insert(</span><span class="s3">0</span><span class="s2">, </span><span class="s1">cur)</span>
+                    <span class="s1">path_src_dst[(src</span><span class="s2">, </span><span class="s1">dst)] = path</span>
+
+    <span class="s2">return </span><span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies)</span>
+
+
+<span class="s0">#####################################################################################################</span>
+
+
+<span class="s0"># Compute the proxy for the ICI throughput</span>
+<span class="s2">def </span><span class="s1">compute_ici_throughput(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing):</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s0"># print(ici_graph)</span>
+    <span class="s0"># print(ici_routing)</span>
+    <span class="s1">(paths_per_class</span><span class="s2">, </span><span class="s1">n_paths_per_edge_per_class) = ici_routing</span>
+    <span class="s1">ici_throughputs = {}</span>
+    <span class="s0"># Iterate through traffic classes</span>
+    <span class="s2">for </span><span class="s1">traffic </span><span class="s2">in </span><span class="s1">[</span><span class="s4">&quot;C2C&quot;</span><span class="s2">, </span><span class="s4">&quot;C2M&quot;</span><span class="s2">, </span><span class="s4">&quot;C2I&quot;</span><span class="s2">, </span><span class="s4">&quot;M2I&quot;</span><span class="s1">]:</span>
+        <span class="s1">ici_throughputs[traffic] = {}</span>
+        <span class="s0"># Compute the maximum theoretically possible throughput</span>
+        <span class="s1">sending_units = sum([chiplets[x[</span><span class="s4">&quot;name&quot;</span><span class="s1">]][</span><span class="s4">&quot;unit_count&quot;</span><span class="s1">] </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">] </span><span class="s2">if</span>
+                             <span class="s1">(chiplets[x[</span><span class="s4">&quot;name&quot;</span><span class="s1">]][</span><span class="s4">&quot;type&quot;</span><span class="s1">][</span><span class="s3">0</span><span class="s1">].upper() == traffic[</span><span class="s3">0</span><span class="s1">])])</span>
+        <span class="s0"># Compute throughputs of all paths in this class</span>
+        <span class="s1">path_throughputs = []</span>
+        <span class="s2">for </span><span class="s1">(src</span><span class="s2">, </span><span class="s1">dst) </span><span class="s2">in </span><span class="s1">paths_per_class[traffic]:</span>
+            <span class="s1">path = paths_per_class[traffic][(src</span><span class="s2">, </span><span class="s1">dst)]</span>
+            <span class="s1">path_throughputs.append(</span>
+                <span class="s3">1.0 </span><span class="s1">/ max([n_paths_per_edge_per_class[traffic][(path[i]</span><span class="s2">, </span><span class="s1">path[i + </span><span class="s3">1</span><span class="s1">])] </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(path) - </span><span class="s3">1</span><span class="s1">)]))</span>
+        <span class="s0"># Use the most congested path as proxy to estimate congestion</span>
+        <span class="s1">n_paths = len(path_throughputs)</span>
+        <span class="s1">path_throughputs_sorted = sorted(path_throughputs)</span>
+        <span class="s1">tp = </span><span class="s3">0</span>
+        <span class="s2">if </span><span class="s1">len(path_throughputs_sorted):</span>
+            <span class="s1">tp = min((n_paths * path_throughputs_sorted[</span><span class="s3">0</span><span class="s1">]) / sending_units</span><span class="s2">, </span><span class="s3">1.0</span><span class="s1">)</span>
+        <span class="s0"># Compute and store statistics</span>
+        <span class="s1">ici_throughputs[traffic][</span><span class="s4">&quot;fraction_of_theoretical_peak&quot;</span><span class="s1">] = tp</span>
+        <span class="s1">ici_throughputs[traffic][</span><span class="s4">&quot;all_per_path_throughputs&quot;</span><span class="s1">] = path_throughputs</span>
+    <span class="s0"># Return results</span>
+    <span class="s2">return </span><span class="s1">ici_throughputs</span>
+
+
+<span class="s0"># Perform the thermal analysis</span>
+<span class="s2">def </span><span class="s1">compute_thermal_analysis(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">thermal_config</span><span class="s2">, </span><span class="s1">area_summary):</span>
+    <span class="s0"># Compute grid-size</span>
+    <span class="s1">resolution = thermal_config[</span><span class="s4">&quot;resolution&quot;</span><span class="s1">]</span>
+    <span class="s1">rows = int(math.ceil(area_summary[</span><span class="s4">&quot;chip_height&quot;</span><span class="s1">] / resolution))</span>
+    <span class="s1">cols = int(math.ceil(area_summary[</span><span class="s4">&quot;chip_width&quot;</span><span class="s1">] / resolution))</span>
+    <span class="s1">(cell_width</span><span class="s2">, </span><span class="s1">cell_height) = (area_summary[</span><span class="s4">&quot;chip_width&quot;</span><span class="s1">] / cols</span><span class="s2">, </span><span class="s1">area_summary[</span><span class="s4">&quot;chip_height&quot;</span><span class="s1">] / rows)</span>
+    <span class="s0"># For each grid-cell, compute the temperature increase due to incoming energy from chiplets / irouters</span>
+    <span class="s1">temperature_in = [[</span><span class="s3">0 </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(cols)] </span><span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(rows)]</span>
+    <span class="s1">k_c = thermal_config[</span><span class="s4">&quot;k_c&quot;</span><span class="s1">]</span>
+    <span class="s1">k_i = thermal_config[</span><span class="s4">&quot;k_i&quot;</span><span class="s1">]</span>
+    <span class="s0"># Compute incoming power due to chiplets</span>
+    <span class="s2">for </span><span class="s1">chiplet_desc </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]:</span>
+        <span class="s1">chiplet = chiplets[chiplet_desc[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+        <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_desc[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])</span>
+        <span class="s1">(w</span><span class="s2">, </span><span class="s1">h) = (chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])</span>
+        <span class="s1">chiplet_pwr = chiplet[</span><span class="s4">&quot;power&quot;</span><span class="s1">]</span>
+        <span class="s1">pwr_per_mm2 = chiplet_pwr / (w * h)</span>
+        <span class="s1">temp_per_mm2 = pwr_per_mm2 * k_c</span>
+        <span class="s1">row = int(math.floor(y / cell_height))</span>
+        <span class="s2">while </span><span class="s1">row &lt;= (((y + h) / cell_height) - </span><span class="s3">1</span><span class="s1">) </span><span class="s2">and </span><span class="s1">row &lt; rows:</span>
+            <span class="s1">col = int(math.floor(x / cell_width))</span>
+            <span class="s2">while </span><span class="s1">col &lt;= (((x + w) / cell_width) - </span><span class="s3">1</span><span class="s1">) </span><span class="s2">and </span><span class="s1">col &lt; cols:</span>
+                <span class="s1">temperature_in[row][col] += temp_per_mm2</span>
+                <span class="s1">col += </span><span class="s3">1</span>
+            <span class="s1">row += </span><span class="s3">1</span>
+        <span class="s0"># Compute incoming power due to interposer_routers</span>
+    <span class="s0"># TODO: For now, we simply add the energy to a single cell. For high resolutions, this can produce hotspots.</span>
+    <span class="s1">irouter_pwr = (packaging[</span><span class="s4">&quot;power_irouter&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s4">&quot;power_irouter&quot; </span><span class="s2">in </span><span class="s1">packaging </span><span class="s2">else </span><span class="s3">0</span><span class="s1">)</span>
+    <span class="s2">for </span><span class="s1">irouter </span><span class="s2">in </span><span class="s1">placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">]:</span>
+        <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (irouter[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">irouter[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])</span>
+        <span class="s1">row = int(math.floor(y / cell_height))</span>
+        <span class="s1">col = int(math.floor(x / cell_width))</span>
+        <span class="s1">temperature_in[row][col] += (irouter_pwr * k_i)</span>
+    <span class="s0"># Perform simulation</span>
+    <span class="s1">amb = thermal_config[</span><span class="s4">&quot;ambient_temperature&quot;</span><span class="s1">]</span>
+    <span class="s1">k_t = thermal_config[</span><span class="s4">&quot;k_t&quot;</span><span class="s1">]</span>
+    <span class="s1">k_s = thermal_config[</span><span class="s4">&quot;k_s&quot;</span><span class="s1">]</span>
+    <span class="s1">k_hs = thermal_config[</span><span class="s4">&quot;k_hs&quot;</span><span class="s1">]</span>
+    <span class="s1">temperature = [[amb </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(cols)] </span><span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(rows)]</span>
+    <span class="s1">iter_count = </span><span class="s3">0</span>
+    <span class="s1">diff = float(</span><span class="s4">&quot;inf&quot;</span><span class="s1">)</span>
+    <span class="s2">while </span><span class="s1">iter_count &lt; thermal_config[</span><span class="s4">&quot;iteration_limit&quot;</span><span class="s1">] </span><span class="s2">and </span><span class="s1">diff &gt; thermal_config[</span><span class="s4">&quot;threshold&quot;</span><span class="s1">]:</span>
+        <span class="s1">iter_count += </span><span class="s3">1</span>
+        <span class="s1">temperature_new = copy.deepcopy(temperature)</span>
+        <span class="s0"># Update all grid cells</span>
+        <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+                <span class="s0"># Apply incoming energy form chiplets / irouters</span>
+                <span class="s1">temperature_new[row][col] += temperature_in[row][col]</span>
+                <span class="s0"># Apply horizontal heat transfer</span>
+                <span class="s1">from_left = </span><span class="s3">0 </span><span class="s2">if </span><span class="s1">col == </span><span class="s3">0 </span><span class="s2">else </span><span class="s1">(temperature[row][col - </span><span class="s3">1</span><span class="s1">] - temperature[row][col])</span>
+                <span class="s1">from_right = </span><span class="s3">0 </span><span class="s2">if </span><span class="s1">col == (cols - </span><span class="s3">1</span><span class="s1">) </span><span class="s2">else </span><span class="s1">(temperature[row][col + </span><span class="s3">1</span><span class="s1">] - temperature[row][col])</span>
+                <span class="s1">from_bottom = </span><span class="s3">0 </span><span class="s2">if </span><span class="s1">row == </span><span class="s3">0 </span><span class="s2">else </span><span class="s1">(temperature[row - </span><span class="s3">1</span><span class="s1">][col] - temperature[row][col])</span>
+                <span class="s1">from_top = </span><span class="s3">0 </span><span class="s2">if </span><span class="s1">row == (rows - </span><span class="s3">1</span><span class="s1">) </span><span class="s2">else </span><span class="s1">(temperature[row + </span><span class="s3">1</span><span class="s1">][col] - temperature[row][col])</span>
+                <span class="s1">temperature_new[row][col] += k_t * (from_left + from_right + from_bottom + from_top)</span>
+                <span class="s0"># Apply outgoing energy through heat sink</span>
+                <span class="s1">temperature_new[row][col] -= (k_hs * abs(temperature[row][col] - amb))  </span><span class="s0"># 默认室温温度低？？？？</span>
+        <span class="s0"># Apply heat dissipated through the side of the chip</span>
+        <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s1">temperature_new[row][</span><span class="s3">0</span><span class="s1">] -= (k_s * abs(temperature[row][</span><span class="s3">0</span><span class="s1">] - amb))</span>
+            <span class="s1">temperature_new[row][cols - </span><span class="s3">1</span><span class="s1">] -= (k_s * abs(temperature[row][cols - </span><span class="s3">1</span><span class="s1">] - amb))</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s1">temperature_new[</span><span class="s3">0</span><span class="s1">][col] -= (k_s * abs(temperature[</span><span class="s3">0</span><span class="s1">][col] - amb))</span>
+            <span class="s1">temperature_new[rows - </span><span class="s3">1</span><span class="s1">][col] -= (k_s * abs(temperature[rows - </span><span class="s3">1</span><span class="s1">][col] - amb))</span>
+        <span class="s0"># Compute the total change in temperature</span>
+        <span class="s1">diff_sum = sum(</span>
+            <span class="s1">[abs(temperature[row][col] - temperature_new[row][col]) </span><span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows) </span><span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols)])</span>
+        <span class="s1">diff = diff_sum / (rows * cols)</span>
+        <span class="s0"># Update grid</span>
+        <span class="s1">temperature = temperature_new</span>
+    <span class="s1">temperature_flat = [x </span><span class="s2">for </span><span class="s1">inner </span><span class="s2">in </span><span class="s1">temperature </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">inner]</span>
+    <span class="s1">thermal_analysis = {</span>
+        <span class="s4">&quot;avg&quot;</span><span class="s1">: sum(temperature_flat) / len(temperature_flat)</span><span class="s2">,</span>
+        <span class="s4">&quot;min&quot;</span><span class="s1">: min(temperature_flat)</span><span class="s2">,</span>
+        <span class="s4">&quot;max&quot;</span><span class="s1">: max(temperature_flat)</span><span class="s2">,</span>
+        <span class="s4">&quot;grid&quot;</span><span class="s1">: temperature</span><span class="s2">,</span>
+        <span class="s4">&quot;iterations_simulated&quot;</span><span class="s1">: iter_count</span>
+    <span class="s1">}</span>
+    <span class="s2">return </span><span class="s1">thermal_analysis</span>
+
+
+<span class="s0"># author: jiaxuming</span>
+<span class="s0"># time: 2024/2/5/18:47</span>
+<span class="s0">#############################################################################</span>
+<span class="s1">N = </span><span class="s3">4  </span><span class="s0"># 计算矩阵乘法时候的行参数，默认矩阵乘法是N * N 的</span>
+<span class="s1">now_time = </span><span class="s3">0  </span><span class="s0"># indicate the time of now</span>
+<span class="s1">data_id = </span><span class="s3">0</span>
+<span class="s1">chiplet_time = []</span>
+<span class="s1">chiplet_sim = </span><span class="s2">None</span>
+
+
+<span class="s2">def </span><span class="s1">get_now_time(nodes_by_type):</span>
+    <span class="s2">global </span><span class="s1">chiplet_time</span>
+    <span class="s1">min_time = float(</span><span class="s4">'inf'</span><span class="s1">)</span>
+    <span class="s2">for </span><span class="s1">chiplet_idx </span><span class="s2">in </span><span class="s1">nodes_by_type[</span><span class="s4">'C'</span><span class="s1">]:</span>
+        <span class="s1">min_time = min(min_time</span><span class="s2">, </span><span class="s1">chiplet_time[chiplet_idx])</span>
+        <span class="s0"># print(now_time,chiplet_time)</span>
+    <span class="s2">return </span><span class="s1">min_time</span>
+
+
+<span class="s2">def </span><span class="s1">trans_data(src_chiplet</span><span class="s2">, </span><span class="s1">end_chiplet</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph):</span>
+    <span class="s2">global </span><span class="s1">chiplet_sim</span><span class="s2">, </span><span class="s1">now_time</span><span class="s2">, </span><span class="s1">chiplet_time</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s2">while True</span><span class="s1">:</span>
+        <span class="s2">if </span><span class="s1">(chiplet_time[src_chiplet] &lt;= now_time):</span>
+            <span class="s2">if </span><span class="s1">dist_src_to_any[src_chiplet][end_chiplet] == float(</span><span class="s4">'inf'</span><span class="s1">):</span>
+                <span class="s1">file_name = </span><span class="s4">'warning.txt'</span>
+                <span class="s2">with </span><span class="s1">open(file_name</span><span class="s2">, </span><span class="s4">'a'</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+                    <span class="s1">file.write(</span><span class="s4">&quot;%d %d %s</span><span class="s2">\n</span><span class="s4">&quot; </span><span class="s1">% (src_chiplet</span><span class="s2">, </span><span class="s1">end_chiplet</span><span class="s2">, </span><span class="s4">'之间有堵塞'</span><span class="s1">))</span>
+                <span class="s2">return</span>
+            <span class="s1">file_name = </span><span class="s4">'./trace_function/bench_%s.txt' </span><span class="s1">% str(src_chiplet)</span>
+            <span class="s2">with </span><span class="s1">open(file_name</span><span class="s2">, </span><span class="s4">'a'</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+                <span class="s0"># 写入字符串到文件</span>
+                <span class="s1">file.write(</span>
+                    <span class="s4">&quot;%s %d %d %d %d % s</span><span class="s2">\n</span><span class="s4">&quot; </span><span class="s1">% (str(now_time)</span><span class="s2">, </span><span class="s1">src_chiplet</span><span class="s2">, </span><span class="s1">end_chiplet</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s4">'submit'</span><span class="s1">))</span>
+
+            <span class="s1">file_name = </span><span class="s4">'./trace_function/bench_%s.txt' </span><span class="s1">% str(end_chiplet)</span>
+            <span class="s2">with </span><span class="s1">open(file_name</span><span class="s2">, </span><span class="s4">'a'</span><span class="s1">) </span><span class="s2">as </span><span class="s1">file:</span>
+                <span class="s0"># 写入字符串到文件</span>
+                <span class="s1">file.write(</span><span class="s4">&quot;%s %d %d %d %d % s</span><span class="s2">\n</span><span class="s4">&quot; </span><span class="s1">% (str(now_time + dist_src_to_any[src_chiplet][end_chiplet])</span><span class="s2">,</span>
+                                                     <span class="s1">src_chiplet</span><span class="s2">, </span><span class="s1">end_chiplet</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s4">'receive'</span><span class="s1">))</span>
+            <span class="s1">chiplet_time[src_chiplet] += phy_latency[src_chiplet]</span>
+            <span class="s1">chiplet_time[end_chiplet] = chiplet_time[end_chiplet] + dist_src_to_any[src_chiplet][end_chiplet]</span>
+            <span class="s0"># now_time = min(chiplet_time[0], chiplet_time[1])</span>
+            <span class="s1">now_time = get_now_time(nodes_by_type)</span>
+            <span class="s2">break</span>
+        <span class="s2">else</span><span class="s1">:</span>
+            <span class="s2">if </span><span class="s1">now_time == float(</span><span class="s4">'inf'</span><span class="s1">):</span>
+                <span class="s2">break</span>
+            <span class="s2">else</span><span class="s1">:</span>
+                <span class="s2">continue</span>
+
+
+<span class="s2">def </span><span class="s1">mul_sim(chiplet_id</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">data_size):</span>
+    <span class="s2">global </span><span class="s1">now_time</span><span class="s2">, </span><span class="s1">chiplet_time</span><span class="s2">, </span><span class="s1">N</span><span class="s2">, </span><span class="s1">data_id</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s2">if </span><span class="s1">chiplet_id == </span><span class="s3">0</span><span class="s1">:</span>
+        <span class="s0"># do the things</span>
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N // </span><span class="s3">2 </span><span class="s1">+ </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">3</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N // </span><span class="s3">2 </span><span class="s1">+ </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">0</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+        <span class="s1">chiplet_time[</span><span class="s3">0</span><span class="s1">] = float(</span><span class="s4">'inf'</span><span class="s1">)</span>
+        <span class="s1">now_time = get_now_time(nodes_by_type)</span>
+
+    <span class="s2">elif </span><span class="s1">chiplet_id == </span><span class="s3">1</span><span class="s1">:</span>
+        <span class="s0"># do the things</span>
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(N // </span><span class="s3">2 </span><span class="s1">+ </span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">3</span><span class="s2">, </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(N // </span><span class="s3">2 </span><span class="s1">+ </span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+            <span class="s2">for </span><span class="s1">j </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s2">, </span><span class="s1">N + </span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size):</span>
+                <span class="s1">data_id += </span><span class="s3">1</span>
+                <span class="s1">trans_data(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s1">data_id</span><span class="s2">, </span><span class="s1">data_size</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph)</span>
+        <span class="s1">chiplet_time[</span><span class="s3">1</span><span class="s1">] = float(</span><span class="s4">'inf'</span><span class="s1">)</span>
+        <span class="s1">now_time = get_now_time(nodes_by_type)</span>
+
+
+<span class="s2">def </span><span class="s1">function_sim(router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">data_size):</span>
+    <span class="s2">global </span><span class="s1">now_time</span><span class="s2">, </span><span class="s1">chiplet_time</span><span class="s2">, </span><span class="s1">chiplet_sim</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s1">now_time = </span><span class="s3">0</span>
+    <span class="s1">chiplet_time = [</span><span class="s3">0 </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">chiplet_sim = [chiplet_instance() </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+    <span class="s1">t = [Thread(target=mul_sim</span><span class="s2">, </span><span class="s1">args=(chiplet_idx</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">data_size)) </span><span class="s2">for </span><span class="s1">chiplet_idx </span><span class="s2">in</span>
+         <span class="s1">nodes_by_type[</span><span class="s4">'C'</span><span class="s1">]]</span>
+    <span class="s0"># 启动线程运行</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(t)):</span>
+        <span class="s1">t[i].start()</span>
+    <span class="s0"># 等待所有线程执行完毕</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(len(t)):</span>
+        <span class="s1">t[i].join()</span>
+
+
+<span class="s2">def </span><span class="s1">init_chiplet(ici_graph</span><span class="s2">, </span><span class="s1">input_buffer_size</span><span class="s2">, </span><span class="s1">output_buffer_size):</span>
+    <span class="s2">global </span><span class="s1">chiplet_ins</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s1">chiplet_ins = []</span>
+    <span class="s0"># def __init__(self,chiplet_id = -1,port_num = 0,input_buffer = 0,output_buffer = 0):</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n):</span>
+        <span class="s1">chiplet_ins.append(chiplet_instance(chiplet_id=i</span><span class="s2">, </span><span class="s1">port_num=</span><span class="s3">10</span><span class="s2">, </span><span class="s1">input_buffer=input_buffer_size</span><span class="s2">,</span>
+                                            <span class="s1">output_buffer=output_buffer_size))</span>
+
+
+<span class="s2">def </span><span class="s1">timing_sim(router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">file_path):</span>
+    <span class="s2">global </span><span class="s1">waiting</span>
+    <span class="s1">(path_src_dst</span><span class="s2">, </span><span class="s1">dist_src_to_any</span><span class="s2">, </span><span class="s1">phy_latency</span><span class="s2">, </span><span class="s1">node_internal_latency</span><span class="s2">, </span><span class="s1">edge_latencies) = router_map</span>
+    <span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">, </span><span class="s1">phy_neighbors) = ici_graph</span>
+    <span class="s2">global </span><span class="s1">event_queue</span>
+    <span class="s1">init_chiplet(ici_graph</span><span class="s2">, </span><span class="s3">1</span><span class="s2">, </span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">event_queue = queue.PriorityQueue()</span>
+    <span class="s2">with </span><span class="s1">open(file_path</span><span class="s2">, </span><span class="s4">'r'</span><span class="s1">) </span><span class="s2">as </span><span class="s1">fl:</span>
+        <span class="s2">for </span><span class="s1">line </span><span class="s2">in </span><span class="s1">fl:</span>
+            <span class="s1">line_data = list(map(int</span><span class="s2">, </span><span class="s1">line.split()))</span>
+            <span class="s1">next_chiplet = </span><span class="s2">None</span>
+            <span class="s2">try</span><span class="s1">:</span>
+                <span class="s1">next_chiplet = path_src_dst[(line_data[</span><span class="s3">1</span><span class="s1">]</span><span class="s2">, </span><span class="s1">line_data[</span><span class="s3">2</span><span class="s1">])][</span><span class="s3">1</span><span class="s1">]</span>
+            <span class="s2">except </span><span class="s1">KeyError:</span>
+                <span class="s1">next_chiplet = line_data[</span><span class="s3">2</span><span class="s1">]</span>
+            <span class="s1">port_id = phy_neighbors[(line_data[</span><span class="s3">1</span><span class="s1">]</span><span class="s2">, </span><span class="s1">next_chiplet)]</span>
+            <span class="s1">message_temp = message(data_id=line_data[</span><span class="s3">4</span><span class="s1">]</span><span class="s2">, </span><span class="s1">data_src=line_data[</span><span class="s3">1</span><span class="s1">]</span><span class="s2">, </span><span class="s1">data_end=line_data[</span><span class="s3">2</span><span class="s1">]</span><span class="s2">,</span>
+                                   <span class="s1">data_type=</span><span class="s3">1</span><span class="s2">, </span><span class="s1">data_size=line_data[</span><span class="s3">3</span><span class="s1">]</span><span class="s2">, </span><span class="s1">data_time=line_data[</span><span class="s3">0</span><span class="s1">]</span><span class="s2">,</span>
+                                   <span class="s1">src_port=port_id[</span><span class="s3">0</span><span class="s1">]</span><span class="s2">, </span><span class="s1">end_port=port_id[</span><span class="s3">1</span><span class="s1">]</span><span class="s2">, </span><span class="s1">next_chiplet=next_chiplet)</span>
+            <span class="s1">event_queue.put(message_temp)</span>
+    <span class="s1">num = </span><span class="s3">0</span>
+    <span class="s2">while not </span><span class="s1">event_queue.empty():</span>
+        <span class="s1">num += </span><span class="s3">1</span>
+        <span class="s0"># if num == 200:</span>
+        <span class="s0">#     break</span>
+        <span class="s1">top_event = event_queue.get()</span>
+        <span class="s0"># if top_event.data_id == 52:</span>
+        <span class="s0"># print(top_event)</span>
+        <span class="s2">with </span><span class="s1">open(</span><span class="s4">'result'</span><span class="s2">,</span><span class="s4">'a'</span><span class="s1">) </span><span class="s2">as </span><span class="s1">fl:</span>
+            <span class="s1">fl.write(str(top_event) + </span><span class="s4">'</span><span class="s2">\n</span><span class="s4">'</span><span class="s1">)</span>
+        <span class="s2">if </span><span class="s1">top_event.data_src == top_event.next_chiplet </span><span class="s2">and </span><span class="s1">top_event.data_type == </span><span class="s3">1</span><span class="s1">:</span>
+        <span class="s0">#     print(top_event.data_id)</span>
+            <span class="s2">continue</span>
+        <span class="s2">if </span><span class="s1">top_event.get_data_type() == </span><span class="s3">0</span><span class="s1">:</span>
+            <span class="s1">release_output_buffer(top_event</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neighbors)</span>
+        <span class="s2">elif </span><span class="s1">top_event.get_data_type() == </span><span class="s3">1</span><span class="s1">:</span>
+            <span class="s1">ask_output_buffer(top_event</span><span class="s2">, </span><span class="s1">router_map)</span>
+        <span class="s2">elif </span><span class="s1">top_event.get_data_type() == </span><span class="s3">2</span><span class="s1">:</span>
+            <span class="s1">handle_data_request(top_event</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neighbors)</span>
+        <span class="s2">elif </span><span class="s1">top_event.get_data_type() == </span><span class="s3">3</span><span class="s1">:</span>
+            <span class="s1">creat_event1(top_event</span><span class="s2">, </span><span class="s1">router_map)</span>
+        <span class="s2">elif </span><span class="s1">top_event.get_data_type() == </span><span class="s3">4</span><span class="s1">:</span>
+            <span class="s1">ask_input_room(top_event</span><span class="s2">, </span><span class="s1">router_map</span><span class="s2">, </span><span class="s1">phy_neighbors)</span>
+        <span class="s2">else</span><span class="s1">:</span>
+            <span class="s1">print(</span><span class="s4">'data type read error'</span><span class="s1">)</span>
+    <span class="s1">print(waiting)</span>
+
+
+<span class="s0">###############################################################################</span>
+<span class="s0"># Compute the selected metrics</span>
+<span class="s2">def </span><span class="s1">compute_metrics(design</span><span class="s2">, </span><span class="s1">results_file</span><span class="s2">, </span><span class="s1">compute_area</span><span class="s2">, </span><span class="s1">compute_power</span><span class="s2">, </span><span class="s1">compute_link</span><span class="s2">, </span><span class="s1">compute_cost</span><span class="s2">, </span><span class="s1">compute_latency</span><span class="s2">,</span>
+                    <span class="s1">compute_throughput</span><span class="s2">, </span><span class="s1">compute_thermal</span><span class="s2">, </span><span class="s1">routing</span><span class="s2">, </span><span class="s1">data_size):</span>
+    <span class="s0"># Results</span>
+    <span class="s1">results = {}</span>
+    <span class="s0"># Timing</span>
+    <span class="s1">timing = {}</span>
+    <span class="s1">start_time_overall = time.time()</span>
+    <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Update flags for metrics that are internally used for other metrics</span>
+    <span class="s0"># inter-chiplet interconnect</span>
+    <span class="s1">compute_ici_graph = compute_latency </span><span class="s2">or </span><span class="s1">compute_throughput</span>
+    <span class="s1">compute_area = compute_area </span><span class="s2">or </span><span class="s1">compute_cost </span><span class="s2">or </span><span class="s1">compute_thermal</span>
+    <span class="s1">compute_link = compute_link </span><span class="s2">or </span><span class="s1">compute_latency</span>
+    <span class="s0"># Technology node</span>
+    <span class="s1">technology = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_cost </span><span class="s2">or </span><span class="s1">compute_latency:</span>
+        <span class="s1">technology = hlp.read_file(filename=design[</span><span class="s4">&quot;technology_nodes_file&quot;</span><span class="s1">])</span>
+    <span class="s0"># Chiplets</span>
+    <span class="s1">chiplets = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_area </span><span class="s2">or </span><span class="s1">compute_power </span><span class="s2">or </span><span class="s1">compute_link </span><span class="s2">or </span><span class="s1">compute_cost </span><span class="s2">or </span><span class="s1">compute_ici_graph </span><span class="s2">or </span><span class="s1">compute_latency </span><span class="s2">or </span><span class="s1">compute_throughput </span><span class="s2">or </span><span class="s1">compute_thermal:</span>
+        <span class="s1">chiplets = hlp.read_file(filename=design[</span><span class="s4">&quot;chiplets_file&quot;</span><span class="s1">])</span>
+    <span class="s0"># Placement</span>
+    <span class="s1">placement = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_area </span><span class="s2">or </span><span class="s1">compute_power </span><span class="s2">or </span><span class="s1">compute_link </span><span class="s2">or </span><span class="s1">compute_cost </span><span class="s2">or </span><span class="s1">compute_ici_graph </span><span class="s2">or </span><span class="s1">compute_latency </span><span class="s2">or </span><span class="s1">compute_throughput </span><span class="s2">or </span><span class="s1">compute_thermal:</span>
+        <span class="s1">placement = hlp.read_file(filename=design[</span><span class="s4">&quot;chiplet_placement_file&quot;</span><span class="s1">])</span>
+    <span class="s0"># Topology</span>
+    <span class="s1">topology = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_link </span><span class="s2">or </span><span class="s1">compute_ici_graph:</span>
+        <span class="s1">topology = hlp.read_file(filename=design[</span><span class="s4">&quot;ici_topology_file&quot;</span><span class="s1">])</span>
+    <span class="s0"># Packaging</span>
+    <span class="s1">packaging = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_power </span><span class="s2">or </span><span class="s1">compute_link </span><span class="s2">or </span><span class="s1">compute_cost </span><span class="s2">or </span><span class="s1">compute_latency </span><span class="s2">or </span><span class="s1">compute_thermal:</span>
+        <span class="s1">packaging = hlp.read_file(filename=design[</span><span class="s4">&quot;packaging_file&quot;</span><span class="s1">])</span>
+    <span class="s0"># Temperature Config</span>
+    <span class="s1">thermal_config = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_thermal:</span>
+        <span class="s1">thermal_config = hlp.read_file(filename=design[</span><span class="s4">&quot;thermal_config&quot;</span><span class="s1">])</span>
+    <span class="s0"># Update timing stats</span>
+    <span class="s1">timing[</span><span class="s4">&quot;reading_inputs&quot;</span><span class="s1">] = time.time() - start_time</span>
+    <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Validate design</span>
+    <span class="s2">if not </span><span class="s1">vld.validate_design(design</span><span class="s2">, </span><span class="s1">technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">thermal_config):</span>
+        <span class="s1">print(</span><span class="s4">&quot;warning: This design contains validation errors - the RapidChiplet toolchain might fail.&quot;</span><span class="s1">)</span>
+    <span class="s0"># Update timing stats</span>
+    <span class="s1">timing[</span><span class="s4">&quot;validating&quot;</span><span class="s1">] = time.time() - start_time</span>
+    <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Only construct the ICI graph if we need it (i.e. if latency or throughput are computed)</span>
+    <span class="s2">if </span><span class="s1">compute_ici_graph:</span>
+        <span class="s1">ici_graph = construct_ici_graph(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology)</span>
+        <span class="s2">if not </span><span class="s1">vld.validate_ici_graph(ici_graph):</span>
+            <span class="s1">print(</span><span class="s4">&quot;warning: The ICI topology contains validation errors - the RapidChiplet toolchain might fail.&quot;</span><span class="s1">)</span>
+        <span class="s1">ici_routing = construct_ici_routing(ici_graph</span><span class="s2">, </span><span class="s1">routing)</span>
+    <span class="s0"># Update timing stats</span>
+    <span class="s1">timing[</span><span class="s4">&quot;processing_inputs&quot;</span><span class="s1">] = time.time() - start_time</span>
+    <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute the area summary</span>
+    <span class="s2">if </span><span class="s1">compute_area:</span>
+        <span class="s1">area_summary = compute_area_summary(chiplets</span><span class="s2">, </span><span class="s1">placement)</span>
+        <span class="s1">results[</span><span class="s4">&quot;area_summary&quot;</span><span class="s1">] = area_summary</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_area_summary&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute the power summary</span>
+    <span class="s2">if </span><span class="s1">compute_power:</span>
+        <span class="s1">power_summary = compute_power_summary(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging)</span>
+        <span class="s1">results[</span><span class="s4">&quot;power_summary&quot;</span><span class="s1">] = power_summary</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_power_summary&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute the link summary</span>
+    <span class="s1">link_lengths_internal = </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">compute_link:</span>
+        <span class="s1">(link_summary</span><span class="s2">, </span><span class="s1">link_lengths_internal) = compute_link_summary(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging)</span>
+        <span class="s1">results[</span><span class="s4">&quot;link_summary&quot;</span><span class="s1">] = link_summary</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_link_summary&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute the manufacturing cost</span>
+    <span class="s2">if </span><span class="s1">compute_cost:</span>
+        <span class="s1">manufacturing_cost = compute_manufacturing_cost(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">area_summary)</span>
+        <span class="s1">results[</span><span class="s4">&quot;manufacturing_cost&quot;</span><span class="s1">] = manufacturing_cost</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_manufacturing_cost&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute ICI latency</span>
+    <span class="s2">if </span><span class="s1">compute_latency:</span>
+        <span class="s1">ici_latency = compute_ici_latency(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing</span><span class="s2">,</span>
+                                          <span class="s1">link_lengths_internal)</span>
+        <span class="s1">results[</span><span class="s4">&quot;ici_latency&quot;</span><span class="s1">] = ici_latency</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_ici_latency&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Compute ICI throughput</span>
+    <span class="s2">if </span><span class="s1">compute_throughput:</span>
+        <span class="s1">ici_throughput = compute_ici_throughput(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing)</span>
+        <span class="s1">results[</span><span class="s4">&quot;ici_throughput&quot;</span><span class="s1">] = ici_throughput</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;computing_ici_throughput&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Thermal analysis</span>
+    <span class="s2">if </span><span class="s1">compute_thermal:</span>
+        <span class="s1">thermal_analysis = compute_thermal_analysis(chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">thermal_config</span><span class="s2">, </span><span class="s1">area_summary)</span>
+        <span class="s1">results[</span><span class="s4">&quot;thermal_analysis&quot;</span><span class="s1">] = thermal_analysis</span>
+        <span class="s0"># Update timing stats</span>
+        <span class="s1">timing[</span><span class="s4">&quot;thermal_analysis&quot;</span><span class="s1">] = time.time() - start_time</span>
+        <span class="s1">start_time = time.time()</span>
+    <span class="s0"># Update timing stats</span>
+    <span class="s1">timing[</span><span class="s4">&quot;total_runtime&quot;</span><span class="s1">] = time.time() - start_time_overall</span>
+    <span class="s0"># Add timing to results</span>
+    <span class="s1">results[</span><span class="s4">&quot;runtime&quot;</span><span class="s1">] = timing</span>
+    <span class="s0"># Store results</span>
+    <span class="s1">hlp.write_file(</span><span class="s4">&quot;./results/%s.json&quot; </span><span class="s1">% results_file</span><span class="s2">, </span><span class="s1">results)</span>
+
+    <span class="s0"># 测试</span>
+    <span class="s1">router_map = compute_router_map(technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">ici_routing</span><span class="s2">,</span>
+                                    <span class="s1">link_lengths_internal</span><span class="s2">, </span><span class="s1">ici_routing)</span>
+    <span class="s2">if </span><span class="s1">data_size == </span><span class="s2">None</span><span class="s1">:</span>
+        <span class="s1">data_size = </span><span class="s3">1</span>
+    <span class="s1">data_size = int(data_size)</span>
+    <span class="s1">function_sim(router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s1">data_size)</span>
+    <span class="s1">timing_sim(router_map</span><span class="s2">, </span><span class="s1">ici_graph</span><span class="s2">, </span><span class="s4">'./trace_function/bench_s2e.txt'</span><span class="s1">)</span>
+
+
+<span class="s2">if </span><span class="s1">__name__ == </span><span class="s4">&quot;__main__&quot;</span><span class="s1">:</span>
+    <span class="s0"># Read command line arguments</span>
+    <span class="s1">parser = argparse.ArgumentParser()</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-df&quot;</span><span class="s2">, </span><span class="s4">&quot;--design_file&quot;</span><span class="s2">, </span><span class="s1">required=</span><span class="s2">True, </span><span class="s1">help=</span><span class="s4">&quot;Path to the </span><span class="s2">\&quot;</span><span class="s4">design</span><span class="s2">\&quot; </span><span class="s4">input file&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-rf&quot;</span><span class="s2">, </span><span class="s4">&quot;--results_file&quot;</span><span class="s2">, </span><span class="s1">required=</span><span class="s2">True,</span>
+                        <span class="s1">help=</span><span class="s4">&quot;Name of the results file (is stored in ./results/)&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-r&quot;</span><span class="s2">, </span><span class="s4">&quot;--routing&quot;</span><span class="s2">, </span><span class="s1">required=</span><span class="s2">False,</span>
+                        <span class="s1">help=</span><span class="s4">&quot;Use the non-default </span><span class="s2">\&quot;</span><span class="s4">balanced</span><span class="s2">\&quot; </span><span class="s4">or </span><span class="s2">\&quot;</span><span class="s4">random</span><span class="s2">\&quot; </span><span class="s4">routing&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-as&quot;</span><span class="s2">, </span><span class="s4">&quot;--area_summary&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the area summary&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-ps&quot;</span><span class="s2">, </span><span class="s4">&quot;--power_summary&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the power summary&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-ls&quot;</span><span class="s2">, </span><span class="s4">&quot;--link_summary&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the link summary&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-c&quot;</span><span class="s2">, </span><span class="s4">&quot;--cost&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the manufacturing cost&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-T&quot;</span><span class="s2">, </span><span class="s4">&quot;--thermal&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the thermal analysis&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-l&quot;</span><span class="s2">, </span><span class="s4">&quot;--latency&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the ICI latency&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-t&quot;</span><span class="s2">, </span><span class="s4">&quot;--throughput&quot;</span><span class="s2">, </span><span class="s1">action=</span><span class="s4">&quot;store_true&quot;</span><span class="s2">, </span><span class="s1">help=</span><span class="s4">&quot;Compute the ICI throughput&quot;</span><span class="s1">)</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">&quot;-ds&quot;</span><span class="s2">, </span><span class="s4">&quot;--data_size&quot;</span><span class="s2">, </span><span class="s1">required=</span><span class="s2">False, </span><span class="s1">help=</span><span class="s4">'Get the data size'</span><span class="s1">)</span>
+    <span class="s1">args = parser.parse_args()</span>
+    <span class="s0"># Read the design file</span>
+    <span class="s1">design = hlp.read_file(filename=args.design_file)</span>
+    <span class="s0"># Compute metrics</span>
+    <span class="s0"># print(args.data_size)</span>
+    <span class="s1">compute_metrics(design=design</span><span class="s2">,</span>
+                    <span class="s1">results_file=args.results_file</span><span class="s2">,</span>
+                    <span class="s1">compute_area=args.area_summary</span><span class="s2">,</span>
+                    <span class="s1">compute_power=args.power_summary</span><span class="s2">,</span>
+                    <span class="s1">compute_link=args.link_summary</span><span class="s2">,</span>
+                    <span class="s1">compute_cost=args.cost</span><span class="s2">,</span>
+                    <span class="s1">compute_latency=args.latency</span><span class="s2">,</span>
+                    <span class="s1">compute_throughput=args.throughput</span><span class="s2">,</span>
+                    <span class="s1">compute_thermal=args.thermal</span><span class="s2">,</span>
+                    <span class="s1">routing=args.routing</span><span class="s2">,</span>
+                    <span class="s1">data_size=args.data_size)</span>
+<span class="s0"># python rapid_chiplet.py -df inputs/designs/mesh_1x4.json -rf jiaxumingfile.json -as -ps -ls -as -c -l -t</span>
+</pre>
+</body>
+</html>

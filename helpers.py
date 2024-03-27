@@ -37,4 +37,3 @@ def rotate_chiplet(chiplet, rotation):
 		chiplet["phys"][pid] = {"x" : cxn + xr, "y" : cyn + yr}
 	# Return a rotated copy of the chiplet
 	return chiplet
-

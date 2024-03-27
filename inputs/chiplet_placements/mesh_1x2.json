@@ -1,0 +1,37 @@
+{
+    "chiplets": [
+        {
+            "position": {
+                "x": 5,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 0
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 0
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        }
+    ],
+    "interposer_routers": []
+}

@@ -1,0 +1,260 @@
+<html>
+<head>
+<title>design_generator.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6a8759;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+design_generator.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">sys</span>
+<span class="s2">import </span><span class="s1">math</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+
+
+<span class="s0"># Note: This function only works if the width and height of all chiplet-types are identical</span>
+<span class="s2">def </span><span class="s1">generate_mesh(rows</span><span class="s2">, </span><span class="s1">cols</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">c_chiplet_name</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">, </span><span class="s1">m_chiplet_name=</span><span class="s2">None, </span><span class="s1">m_phy_map=</span><span class="s2">None,</span>
+                  <span class="s1">i_chiplet_name=</span><span class="s2">None, </span><span class="s1">i_phy_map=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0"># Load chiplets</span>
+    <span class="s1">c_chiplet = chiplets[c_chiplet_name]</span>
+    <span class="s1">m_chiplet = chiplets[m_chiplet_name] </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else None</span>
+    <span class="s1">i_chiplet = chiplets[i_chiplet_name] </span><span class="s2">if </span><span class="s1">i_chiplet_name </span><span class="s2">else None</span>
+    <span class="s0"># Extract chiplet dimensions</span>
+    <span class="s1">(cw</span><span class="s2">, </span><span class="s1">ch) = (c_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">c_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">])</span>
+    <span class="s1">(mw</span><span class="s2">, </span><span class="s1">mh) = (m_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">m_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s1">(</span><span class="s4">0</span><span class="s2">, </span><span class="s4">0</span><span class="s1">)</span>
+    <span class="s1">(iw</span><span class="s2">, </span><span class="s1">ih) = (i_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">i_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) </span><span class="s2">if </span><span class="s1">i_chiplet_name </span><span class="s2">else </span><span class="s1">(</span><span class="s4">0</span><span class="s2">, </span><span class="s4">0</span><span class="s1">)</span>
+    <span class="s0"># Prepare the files to be generated</span>
+    <span class="s1">placement = {</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">: []</span><span class="s2">, </span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">: []}</span>
+    <span class="s1">topology = []</span>
+    <span class="s0"># Add compute chiplets and links between them</span>
+    <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + col * cw</span><span class="s2">, </span><span class="s1">ih + row * ch)</span>
+            <span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;rotation&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;name&quot;</span><span class="s1">: c_chiplet_name})</span>
+            <span class="s0"># Link to the west</span>
+            <span class="s2">if </span><span class="s1">col &gt; </span><span class="s4">0</span><span class="s1">:</span>
+                <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: row * cols + col</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;W&quot;</span><span class="s1">]}</span>
+                <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: row * cols + (col - </span><span class="s4">1</span><span class="s1">)</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;E&quot;</span><span class="s1">]}</span>
+                <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Link to the south</span>
+            <span class="s2">if </span><span class="s1">row &gt; </span><span class="s4">0</span><span class="s1">:</span>
+                <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: row * cols + col</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;S&quot;</span><span class="s1">]}</span>
+                <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: (row - </span><span class="s4">1</span><span class="s1">) * cols + col</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;N&quot;</span><span class="s1">]}</span>
+                <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+
+    <span class="s0"># Add memory chiplets if configured</span>
+    <span class="s2">if </span><span class="s1">m_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s0"># Memory on left</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (</span><span class="s4">0</span><span class="s2">, </span><span class="s1">ih + row * ch)</span>
+            <span class="s1">rot = {</span><span class="s3">&quot;N&quot;</span><span class="s1">: </span><span class="s4">270</span><span class="s2">, </span><span class="s3">&quot;E&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;S&quot;</span><span class="s1">: </span><span class="s4">90</span><span class="s2">, </span><span class="s3">&quot;W&quot;</span><span class="s1">: </span><span class="s4">180</span><span class="s1">}[list(m_phy_map.keys())[</span><span class="s4">0</span><span class="s1">]]</span>
+            <span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;rotation&quot;</span><span class="s1">: rot</span><span class="s2">, </span><span class="s3">&quot;name&quot;</span><span class="s1">: m_chiplet_name})</span>
+            <span class="s0"># Links of left memories</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: len(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]) - </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: row * cols + </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;W&quot;</span><span class="s1">]}</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Memory on right</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + cols * cw</span><span class="s2">, </span><span class="s1">ih + row * ch)</span>
+            <span class="s1">rot = {</span><span class="s3">&quot;N&quot;</span><span class="s1">: </span><span class="s4">90</span><span class="s2">, </span><span class="s3">&quot;E&quot;</span><span class="s1">: </span><span class="s4">180</span><span class="s2">, </span><span class="s3">&quot;S&quot;</span><span class="s1">: </span><span class="s4">270</span><span class="s2">, </span><span class="s3">&quot;W&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}[list(m_phy_map.keys())[</span><span class="s4">0</span><span class="s1">]]</span>
+            <span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;rotation&quot;</span><span class="s1">: rot</span><span class="s2">, </span><span class="s3">&quot;name&quot;</span><span class="s1">: m_chiplet_name})</span>
+            <span class="s0"># Links of right memories</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: len(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]) - </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: row * cols + (cols - </span><span class="s4">1</span><span class="s1">)</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;E&quot;</span><span class="s1">]}</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+
+    <span class="s0"># Add IO chiplets if configured</span>
+    <span class="s2">if </span><span class="s1">i_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s0"># IO on bottom</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + col * iw</span><span class="s2">, </span><span class="s4">0</span><span class="s1">)</span>
+            <span class="s1">rot = {</span><span class="s3">&quot;N&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;E&quot;</span><span class="s1">: </span><span class="s4">270</span><span class="s2">, </span><span class="s3">&quot;S&quot;</span><span class="s1">: </span><span class="s4">180</span><span class="s2">, </span><span class="s3">&quot;W&quot;</span><span class="s1">: </span><span class="s4">90</span><span class="s1">}[list(m_phy_map.keys())[</span><span class="s4">0</span><span class="s1">]]</span>
+            <span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;rotation&quot;</span><span class="s1">: rot</span><span class="s2">, </span><span class="s3">&quot;name&quot;</span><span class="s1">: i_chiplet_name})</span>
+            <span class="s0"># Links of bottom IOs</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: len(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]) - </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: </span><span class="s4">0 </span><span class="s1">* cols + col</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;S&quot;</span><span class="s1">]}</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># IO on top</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + col * iw</span><span class="s2">, </span><span class="s1">ih + rows * ch)</span>
+            <span class="s1">rot = {</span><span class="s3">&quot;N&quot;</span><span class="s1">: </span><span class="s4">180</span><span class="s2">, </span><span class="s3">&quot;E&quot;</span><span class="s1">: </span><span class="s4">90</span><span class="s2">, </span><span class="s3">&quot;S&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;W&quot;</span><span class="s1">: </span><span class="s4">270</span><span class="s1">}[list(m_phy_map.keys())[</span><span class="s4">0</span><span class="s1">]]</span>
+            <span class="s1">placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;rotation&quot;</span><span class="s1">: rot</span><span class="s2">, </span><span class="s3">&quot;name&quot;</span><span class="s1">: i_chiplet_name})</span>
+            <span class="s0"># Links of top IOs</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: len(placement[</span><span class="s3">&quot;chiplets&quot;</span><span class="s1">]) - </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: (rows - </span><span class="s4">1</span><span class="s1">) * cols + col</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: c_phy_map[</span><span class="s3">&quot;N&quot;</span><span class="s1">]}</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+
+    <span class="s0"># Return placement and topology</span>
+    <span class="s2">return </span><span class="s1">(placement</span><span class="s2">, </span><span class="s1">topology)</span>
+
+
+<span class="s0"># Note: This function only works if the width and height of all chiplet-types are identical</span>
+<span class="s2">def </span><span class="s1">generate_concentrated_mesh(rows</span><span class="s2">, </span><span class="s1">cols</span><span class="s2">, </span><span class="s1">concentration</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">c_chiplet_name</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">, </span><span class="s1">m_chiplet_name=</span><span class="s2">None,</span>
+                               <span class="s1">m_phy_map=</span><span class="s2">None, </span><span class="s1">i_chiplet_name=</span><span class="s2">None, </span><span class="s1">i_phy_map=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s2">if </span><span class="s1">math.sqrt(concentration) % </span><span class="s4">1 </span><span class="s1">!= </span><span class="s4">0</span><span class="s1">:</span>
+        <span class="s1">print(</span><span class="s3">&quot;Error: The concentration must be a square number&quot;</span><span class="s1">)</span>
+        <span class="s1">sys.exit()</span>
+    <span class="s1">con = int(math.sqrt(concentration))</span>
+    <span class="s1">(crows</span><span class="s2">, </span><span class="s1">ccols) = (rows * con</span><span class="s2">, </span><span class="s1">cols * con)</span>
+    <span class="s0"># We use the function for the regular mesh to generate the placement</span>
+    <span class="s1">(placement</span><span class="s2">, </span><span class="s1">_) = generate_mesh(crows</span><span class="s2">, </span><span class="s1">ccols</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">c_chiplet_name</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">, </span><span class="s1">m_chiplet_name</span><span class="s2">, </span><span class="s1">m_phy_map</span><span class="s2">,</span>
+                                   <span class="s1">i_chiplet_name</span><span class="s2">, </span><span class="s1">i_phy_map)</span>
+    <span class="s1">topology = []</span>
+    <span class="s0"># Load chiplets</span>
+    <span class="s1">c_chiplet = chiplets[</span><span class="s3">&quot;compute_chiplet_4phys&quot;</span><span class="s1">]</span>
+    <span class="s1">m_chiplet = chiplets[</span><span class="s3">&quot;compute_chiplet_4phys&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else None</span>
+    <span class="s1">i_chiplet = chiplets[</span><span class="s3">&quot;compute_chiplet_4phys&quot;</span><span class="s1">] </span><span class="s2">if </span><span class="s1">i_chiplet_name </span><span class="s2">else None</span>
+    <span class="s0"># Extract chiplet dimensions</span>
+    <span class="s1">(cw</span><span class="s2">, </span><span class="s1">ch) = (c_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">c_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">])</span>
+    <span class="s1">(mw</span><span class="s2">, </span><span class="s1">mh) = (m_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">m_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s1">(</span><span class="s4">0</span><span class="s2">, </span><span class="s4">0</span><span class="s1">)</span>
+    <span class="s1">(iw</span><span class="s2">, </span><span class="s1">ih) = (i_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">i_chiplet[</span><span class="s3">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s3">&quot;y&quot;</span><span class="s1">]) </span><span class="s2">if </span><span class="s1">i_chiplet_name </span><span class="s2">else </span><span class="s1">(</span><span class="s4">0</span><span class="s2">, </span><span class="s4">0</span><span class="s1">)</span>
+    <span class="s0"># Add interposer-routers for compute-cores</span>
+    <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + (col + </span><span class="s4">0.5</span><span class="s1">) * con * cw</span><span class="s2">, </span><span class="s1">ih + (row + </span><span class="s4">0.5</span><span class="s1">) * con * ch)</span>
+            <span class="s1">prts = concentration + </span><span class="s4">4</span>
+            <span class="s1">placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;ports&quot;</span><span class="s1">: prts})</span>
+    <span class="s0"># Add interposer-routers for memory-chiplets</span>
+    <span class="s2">if </span><span class="s1">m_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s0"># Left memories</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw</span><span class="s2">, </span><span class="s1">ih + (row + </span><span class="s4">0.5</span><span class="s1">) * con * ch)</span>
+            <span class="s1">prts = con + </span><span class="s4">1</span>
+            <span class="s1">placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;ports&quot;</span><span class="s1">: prts})</span>
+            <span class="s0"># Right memories</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + ccols * cw</span><span class="s2">, </span><span class="s1">ih + (row + </span><span class="s4">0.5</span><span class="s1">) * con * ch)</span>
+            <span class="s1">prts = con + </span><span class="s4">1</span>
+            <span class="s1">placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;ports&quot;</span><span class="s1">: prts})</span>
+    <span class="s0"># Add interposer-routers for IO-chiplets</span>
+    <span class="s2">if </span><span class="s1">i_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s0"># Bottom IOs</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + (col + </span><span class="s4">0.5</span><span class="s1">) * con * cw</span><span class="s2">, </span><span class="s1">ih)</span>
+            <span class="s1">prts = con + </span><span class="s4">1</span>
+            <span class="s1">placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;ports&quot;</span><span class="s1">: prts})</span>
+            <span class="s0"># Top IOs</span>
+            <span class="s1">(x</span><span class="s2">, </span><span class="s1">y) = (mw + (col + </span><span class="s4">0.5</span><span class="s1">) * con * cw</span><span class="s2">, </span><span class="s1">ih + crows * ch)</span>
+            <span class="s1">prts = con + </span><span class="s4">1</span>
+            <span class="s1">placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">].append({</span><span class="s3">&quot;position&quot;</span><span class="s1">: {</span><span class="s3">&quot;x&quot;</span><span class="s1">: x</span><span class="s2">, </span><span class="s3">&quot;y&quot;</span><span class="s1">: y}</span><span class="s2">, </span><span class="s3">&quot;ports&quot;</span><span class="s1">: prts})</span>
+    <span class="s0"># Construct topology</span>
+    <span class="s1">topology = []</span>
+    <span class="s1">port_map = [</span><span class="s4">0 </span><span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">range(len(placement[</span><span class="s3">&quot;interposer_routers&quot;</span><span class="s1">]))]</span>
+    <span class="s0"># Add links connecting compute-chiplets to irouters</span>
+    <span class="s2">for </span><span class="s1">crow </span><span class="s2">in </span><span class="s1">range(crows):</span>
+        <span class="s2">for </span><span class="s1">ccol </span><span class="s2">in </span><span class="s1">range(ccols):</span>
+            <span class="s1">cid = crow * ccols + ccol</span>
+            <span class="s1">(row</span><span class="s2">, </span><span class="s1">col) = (crow // con</span><span class="s2">, </span><span class="s1">ccol // con)</span>
+            <span class="s1">rid = row * cols + col</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: cid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid]}</span>
+            <span class="s1">port_map[rid] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Add links connecting memory-chiplets to irouters</span>
+    <span class="s2">if </span><span class="s1">m_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">crow </span><span class="s2">in </span><span class="s1">range(crows):</span>
+            <span class="s0"># Memory on left</span>
+            <span class="s1">cid = crows * ccols + </span><span class="s4">2 </span><span class="s1">* crow</span>
+            <span class="s1">rid = rows * cols + </span><span class="s4">2 </span><span class="s1">* (crow // con)</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: cid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid]}</span>
+            <span class="s1">port_map[rid] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Memory on right</span>
+            <span class="s1">cid = crows * ccols + </span><span class="s4">2 </span><span class="s1">* crow + </span><span class="s4">1</span>
+            <span class="s1">rid = rows * cols + </span><span class="s4">2 </span><span class="s1">* (crow // con) + </span><span class="s4">1</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: cid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid]}</span>
+            <span class="s1">port_map[rid] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Add links connecting IO-chiplets to irouters</span>
+    <span class="s2">if </span><span class="s1">i_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">ccol </span><span class="s2">in </span><span class="s1">range(ccols):</span>
+            <span class="s0"># Memory on left</span>
+            <span class="s1">cid = crows * ccols + ((</span><span class="s4">2 </span><span class="s1">* crows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* ccol</span>
+            <span class="s1">rid = rows * cols + ((</span><span class="s4">2 </span><span class="s1">* rows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* (ccol // con)</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: cid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid]}</span>
+            <span class="s1">port_map[rid] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Memory on right</span>
+            <span class="s1">cid = crows * ccols + ((</span><span class="s4">2 </span><span class="s1">* crows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* ccol + </span><span class="s4">1</span>
+            <span class="s1">rid = rows * cols + ((</span><span class="s4">2 </span><span class="s1">* rows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* (ccol // con) + </span><span class="s4">1</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;chiplet&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: cid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid]}</span>
+            <span class="s1">port_map[rid] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Add mesh between irouters</span>
+    <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(cols):</span>
+            <span class="s0"># Horizontal</span>
+            <span class="s2">if </span><span class="s1">col &lt; cols - </span><span class="s4">1</span><span class="s1">:</span>
+                <span class="s1">rid1 = row * cols + col</span>
+                <span class="s1">rid2 = row * cols + (col + </span><span class="s4">1</span><span class="s1">)</span>
+                <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+                <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+                <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+                <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+                <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Vertical</span>
+            <span class="s2">if </span><span class="s1">row &lt; rows - </span><span class="s4">1</span><span class="s1">:</span>
+                <span class="s1">rid1 = row * cols + col</span>
+                <span class="s1">rid2 = (row + </span><span class="s4">1</span><span class="s1">) * cols + col</span>
+                <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+                <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+                <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+                <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+                <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Connect memory-irouters to rest</span>
+    <span class="s2">if </span><span class="s1">m_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">row </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s0"># Memory on the left</span>
+            <span class="s1">rid1 = row * cols</span>
+            <span class="s1">rid2 = rows * cols + </span><span class="s4">2 </span><span class="s1">* row</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+            <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+            <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># Memory on the left</span>
+            <span class="s1">rid1 = row * cols + (cols - </span><span class="s4">1</span><span class="s1">)</span>
+            <span class="s1">rid2 = rows * cols + </span><span class="s4">2 </span><span class="s1">* row + </span><span class="s4">1</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+            <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+            <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Connect memory-irouters to rest</span>
+    <span class="s2">if </span><span class="s1">i_chiplet_name:</span>
+        <span class="s2">for </span><span class="s1">col </span><span class="s2">in </span><span class="s1">range(rows):</span>
+            <span class="s0"># IO on the bottom</span>
+            <span class="s1">rid1 = col</span>
+            <span class="s1">rid2 = rows * cols + ((</span><span class="s4">2 </span><span class="s1">* rows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* col</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+            <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+            <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+            <span class="s0"># IO on the bottom</span>
+            <span class="s1">rid1 = (rows - </span><span class="s4">1</span><span class="s1">) * cols + col</span>
+            <span class="s1">rid2 = rows * cols + ((</span><span class="s4">2 </span><span class="s1">* rows) </span><span class="s2">if </span><span class="s1">m_chiplet_name </span><span class="s2">else </span><span class="s4">0</span><span class="s1">) + </span><span class="s4">2 </span><span class="s1">* col + </span><span class="s4">1</span>
+            <span class="s1">ep1 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid1</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid1]}</span>
+            <span class="s1">ep2 = {</span><span class="s3">&quot;type&quot;</span><span class="s1">: </span><span class="s3">&quot;irouter&quot;</span><span class="s2">, </span><span class="s3">&quot;outer_id&quot;</span><span class="s1">: rid2</span><span class="s2">, </span><span class="s3">&quot;inner_id&quot;</span><span class="s1">: port_map[rid2]}</span>
+            <span class="s1">port_map[rid1] += </span><span class="s4">1</span>
+            <span class="s1">port_map[rid2] += </span><span class="s4">1</span>
+            <span class="s1">topology.append({</span><span class="s3">&quot;ep1&quot;</span><span class="s1">: ep1</span><span class="s2">, </span><span class="s3">&quot;ep2&quot;</span><span class="s1">: ep2})</span>
+    <span class="s0"># Return placement and topology</span>
+    <span class="s2">return </span><span class="s1">(placement</span><span class="s2">, </span><span class="s1">topology)</span>
+
+</pre>
+</body>
+</html>

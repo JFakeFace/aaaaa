@@ -1,0 +1,773 @@
+{
+    "chiplets": [
+        {
+            "position": {
+                "x": 5,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 15
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 20
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 25
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 30
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 35
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 40
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_4phys"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 5
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 5
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 10
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 10
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 15
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 15
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 20
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 20
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 25
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 25
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 30
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 30
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 35
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 35
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 40
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 45,
+                "y": 40
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 20,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 25,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 30,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 35,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 40,
+                "y": 45
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        }
+    ],
+    "interposer_routers": []
+}

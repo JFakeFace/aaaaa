@@ -1,0 +1,137 @@
+{
+    "chiplets": [
+        {
+            "position": {
+                "x": 5,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_1phy"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 5
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_1phy"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_1phy"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 10
+            },
+            "rotation": 0,
+            "name": "compute_chiplet_1phy"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 5
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 5
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 0,
+                "y": 10
+            },
+            "rotation": 270,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 10
+            },
+            "rotation": 90,
+            "name": "memory_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 15
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 0
+            },
+            "rotation": 0,
+            "name": "io_chiplet_square"
+        },
+        {
+            "position": {
+                "x": 10,
+                "y": 15
+            },
+            "rotation": 180,
+            "name": "io_chiplet_square"
+        }
+    ],
+    "interposer_routers": [
+        {
+            "position": {
+                "x": 10.0,
+                "y": 10.0
+            },
+            "ports": 8
+        },
+        {
+            "position": {
+                "x": 5,
+                "y": 10.0
+            },
+            "ports": 3
+        },
+        {
+            "position": {
+                "x": 15,
+                "y": 10.0
+            },
+            "ports": 3
+        },
+        {
+            "position": {
+                "x": 10.0,
+                "y": 5
+            },
+            "ports": 3
+        },
+        {
+            "position": {
+                "x": 10.0,
+                "y": 15
+            },
+            "ports": 3
+        }
+    ]
+}

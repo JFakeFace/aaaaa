@@ -1,0 +1,144 @@
+<html>
+<head>
+<title>README.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #a9b7c6;}
+.s3 { color: #9876aa; font-style: italic;}
+.s4 { color: #6a8759;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+README.md</font>
+</center></td></tr></table>
+<pre><span class="s0"># </span><span class="s2">RapidChiplet</span>
+
+<span class="s1">&lt;p align=&quot;center&quot;&gt;</span>
+  <span class="s1">&lt;img src=&quot;misc/rapid_chiplet_architecture.svg&quot;&gt;</span>
+<span class="s1">&lt;/p&gt;</span>
+
+<span class="s0">## </span><span class="s2">Setup Guide</span>
+
+<span class="s2">Clone the RapidChiplet repository</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">git clone https://github.com/spcl/rapid_chiplet.git</span>
+<span class="s0">```</span>
+
+<span class="s2">Install all requirements using pip</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">cd rapid_chiplet</span>
+<span class="s4">pip install -r requirements.txt</span>
+<span class="s0">```</span>
+
+<span class="s2">Build the BookSim2 </span><span class="s1">[</span><span class="s2">1,2</span><span class="s1">] </span><span class="s2">simulator</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">cd booksim2/src</span>
+<span class="s4">make</span>
+<span class="s0">```</span>
+
+<span class="s0">## </span><span class="s2">Reproducing results from the RapidChiplet paper </span><span class="s1">[</span><span class="s2">3</span><span class="s1">]</span>
+
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 reproduce_results_from_paper.py</span>
+<span class="s0">```</span>
+
+<span class="s2">The resulting plots will be stored in the `./plots/` directory. </span>
+<span class="s2">Note that this script runs for multiple hours.</span>
+<span class="s2">The results might slightly differ from the paper due to different system specifications.</span>
+
+<span class="s0">## </span><span class="s2">Usage</span>
+
+<span class="s0">### </span><span class="s2">Inputs</span>
+
+<span class="s2">Configure your chip design using the seven different input files. Check out the example files in `./inputs/` and the input description in the paper </span><span class="s1">[</span><span class="s2">3</span><span class="s1">] </span><span class="s2">to get started.</span>
+
+<span class="s0">### </span><span class="s2">Visualization</span>
+
+<span class="s2">Visualizations of chiplets and chip designs will be stored in the `./visualizations/` directory.</span>
+
+<span class="s2">Visualize a chiplet</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 chiplet_visualizer.py -cf &lt;chiplet-file&gt; -cn &lt;chiplet-name&gt;</span>
+<span class="s0">```</span>
+
+<span class="s2">Example</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 chiplet_visualizer.py -cf inputs/chiplets/example_chiplets.json -cn compute_chiplet_4phys</span>
+<span class="s0">```</span>
+
+<span class="s2">Visualize a chip design</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 design_visualizer.py -df &lt;design-file&gt; </span>
+<span class="s0">```</span>
+
+<span class="s2">Example</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 design_visualizer.py -df inputs/designs/example_design.json</span>
+<span class="s0">```</span>
+
+<span class="s0">### </span><span class="s2">Computation of Target Metrics</span>
+
+<span class="s2">Each of the seven metrics can be toggled ON using a command line flag. For a summary of flags, run</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 rapid_chiplet.py -h</span>
+<span class="s0">```</span>
+
+<span class="s2">To compute all seven metrics, run</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 rapid_chiplet.py -df &lt;design-file&gt; -rf &lt;results-file&gt; -as -ps -ls -c -T -l -t</span>
+<span class="s0">```</span>
+
+<span class="s2">Example</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 rapid_chiplet.py -df inputs/designs/example_design.json -rf example_results -as -ps -ls -c -T -l -t</span>
+<span class="s0">```</span>
+
+<span class="s2">All results are stored in the `./results/` directory.</span>
+
+<span class="s0">### </span><span class="s2">Cycle-Accurate Simulations using BookSim2 </span><span class="s1">[</span><span class="s2">1,2</span><span class="s1">]</span>
+
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 run_booksim_simulation.py -df &lt;design-file&gt; -rf &lt;results_file&gt;</span>
+<span class="s0">```</span>
+
+<span class="s2">Example</span><span class="s1">:</span>
+<span class="s0">```</span><span class="s3">bash</span>
+<span class="s4">python3 run_booksim_simulation.py -df inputs/designs/example_design.json -rf example_simulation_results</span>
+<span class="s0">```</span>
+
+<span class="s2">All simulation results are stored in the `./results/` directory.</span>
+
+<span class="s0">## </span><span class="s2">Contact</span>
+
+<span class="s2">Do you have any questions or did you find a bug? Contact us at patrick.iff@inf.ethz.ch.</span>
+
+<span class="s0">## </span><span class="s2">Citation</span>
+
+<span class="s2">Did you use RapidChiplet in your work? Feel free to cite us using the following citation</span><span class="s1">:</span>
+
+<span class="s0">```</span><span class="s3">bibtex</span>
+<span class="s4">@misc{iff2023rapidchiplet,</span>
+      <span class="s4">title={RapidChiplet: A Toolchain for Rapid Design Space Exploration of Chiplet Architectures}, </span>
+      <span class="s4">author={Patrick Iff and Benigna Bruggmann and Maciej Besta and Luca Benini and Torsten Hoefler},</span>
+      <span class="s4">year={2023},</span>
+      <span class="s4">eprint={2311.06081},</span>
+      <span class="s4">archivePrefix={arXiv},i</span>
+      <span class="s4">primaryClass={cs.AR}</span>
+<span class="s4">}</span>
+<span class="s0">```</span>
+
+<span class="s0">## </span><span class="s2">References</span>
+
+<span class="s1">[</span><span class="s2">1</span><span class="s1">] </span><span class="s2">Jiang, N., Becker, D.U., Michelogiannakis, G., Balfour, J., Towles, B., Shaw, D.E., Kim, J. and Dally, W.J., 2013, April. A detailed and flexible cycle-accurate network-on-chip simulator. In 2013 IEEE international symposium on performance analysis of systems and software </span><span class="s1">(</span><span class="s2">ISPASS</span><span class="s1">) (</span><span class="s2">pp. 86-96</span><span class="s1">)</span><span class="s2">. IEEE.</span>
+
+<span class="s1">[</span><span class="s2">2</span><span class="s1">] https://github.com/booksim/booksim2</span>
+
+<span class="s1">[</span><span class="s2">3</span><span class="s1">] </span><span class="s2">P. Iff, B. Bruggmann, M. Besta, L. Benini, and T. Hoefler, “Rapidchiplet</span><span class="s1">: </span><span class="s2">A toolchain for rapid design space exploration of chiplet architectures,” 2023.</span>
+</pre>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<html>
+<head>
+<title>reproduce_results_from_paper.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6a8759;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+reproduce_results_from_paper.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">time</span>
+<span class="s2">import </span><span class="s1">subprocess</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+<span class="s2">import </span><span class="s1">design_generator </span><span class="s2">as </span><span class="s1">dgen</span>
+<span class="s2">import </span><span class="s1">plots</span>
+<span class="s2">def </span><span class="s1">generate_mesh_designs_any_shape(chiplets</span><span class="s2">,</span><span class="s1">x</span><span class="s2">,</span><span class="s1">y):</span>
+	<span class="s0"># Setup for mesh</span>
+	<span class="s1">c_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;E&quot; </span><span class="s1">: </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;S&quot; </span><span class="s1">: </span><span class="s4">2</span><span class="s2">, </span><span class="s3">&quot;W&quot; </span><span class="s1">: </span><span class="s4">3</span><span class="s1">}</span>
+	<span class="s1">m_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s1">i_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s0"># Create some mesh topologies:</span>
+	<span class="s1">names = []</span>
+	<span class="s1">scales = []</span>
+	<span class="s0"># Iterate through scales</span>
+	<span class="s1">name = </span><span class="s3">&quot;mesh_%dx%d&quot; </span><span class="s1">% (x</span><span class="s2">,</span><span class="s1">y)</span>
+	<span class="s1">names.append(name)</span>
+	<span class="s1">scales.append(x)</span>
+	<span class="s1">(placement</span><span class="s2">, </span><span class="s1">topology) = dgen.generate_mesh(x</span><span class="s2">, </span><span class="s1">y</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s3">&quot;compute_chiplet_4phys&quot;</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">,</span>
+											   <span class="s3">&quot;memory_chiplet_square&quot;</span><span class="s2">,</span><span class="s1">m_phy_map)</span>
+	<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">placement)</span>
+	<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">topology)</span>
+	<span class="s1">design = {</span>
+		<span class="s3">&quot;technology_nodes_file&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/technology_nodes/example_technologies.json&quot;</span><span class="s2">,</span>
+		<span class="s3">&quot;chiplets_file&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/chiplets/example_chiplets.json&quot;</span><span class="s2">,</span>
+		<span class="s3">&quot;chiplet_placement_file&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+		<span class="s3">&quot;ici_topology_file&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+		<span class="s3">&quot;packaging_file&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/packaging/example_packaging_passive.json&quot;</span><span class="s2">,</span>
+		<span class="s3">&quot;thermal_config&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/thermal_config/example_thermal_config.json&quot;</span><span class="s2">,</span>
+		<span class="s3">&quot;booksim_config&quot;</span><span class="s1">: </span><span class="s3">&quot;inputs/booksim_config/example_booksim_config.json&quot;</span>
+	<span class="s1">}</span>
+	<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/designs/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">design)</span>
+
+	<span class="s2">return </span><span class="s1">list(zip(names</span><span class="s2">, </span><span class="s1">scales))</span>
+
+<span class="s0"># Generate a series of mesh-designs with different scales</span>
+
+<span class="s2">def </span><span class="s1">generate_mesh_designs(chiplets</span><span class="s2">, </span><span class="s1">max_size):</span>
+	<span class="s0"># Setup for mesh</span>
+	<span class="s1">c_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;E&quot; </span><span class="s1">: </span><span class="s4">1</span><span class="s2">, </span><span class="s3">&quot;S&quot; </span><span class="s1">: </span><span class="s4">2</span><span class="s2">, </span><span class="s3">&quot;W&quot; </span><span class="s1">: </span><span class="s4">3</span><span class="s1">}</span>
+	<span class="s1">m_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s1">i_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s0"># Create some mesh topologies:</span>
+	<span class="s1">names = []</span>
+	<span class="s1">scales = []</span>
+	<span class="s0"># Iterate through scales</span>
+	<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">range(</span><span class="s4">2</span><span class="s2">,</span><span class="s1">max_size + </span><span class="s4">1</span><span class="s1">):</span>
+		<span class="s1">name = </span><span class="s3">&quot;mesh_%dx%d&quot; </span><span class="s1">% (x</span><span class="s2">,</span><span class="s1">x)</span>
+		<span class="s1">names.append(name)</span>
+		<span class="s1">scales.append(x)</span>
+		<span class="s1">(placement</span><span class="s2">, </span><span class="s1">topology) = dgen.generate_mesh(x</span><span class="s2">, </span><span class="s1">x</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s3">&quot;compute_chiplet_4phys&quot;</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">, </span><span class="s3">&quot;memory_chiplet_square&quot;</span><span class="s2">, </span><span class="s1">m_phy_map</span><span class="s2">, </span><span class="s3">&quot;io_chiplet_1phy&quot;</span><span class="s2">, </span><span class="s1">i_phy_map)</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">placement)</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">topology)</span>
+		<span class="s1">design = {</span>
+			<span class="s3">&quot;technology_nodes_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/technology_nodes/example_technologies.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;chiplets_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/chiplets/example_chiplets.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;chiplet_placement_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+			<span class="s3">&quot;ici_topology_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+			<span class="s3">&quot;packaging_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/packaging/example_packaging_passive.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;thermal_config&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/thermal_config/example_thermal_config.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;booksim_config&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/booksim_config/example_booksim_config.json&quot;</span>
+		<span class="s1">}</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/designs/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">design)</span>
+	<span class="s2">return </span><span class="s1">list(zip(names</span><span class="s2">, </span><span class="s1">scales))</span>
+
+<span class="s0"># Generate a series of concentrated-mesh-designs with different scales</span>
+<span class="s2">def </span><span class="s1">generate_cmesh_designs(chiplets</span><span class="s2">, </span><span class="s1">max_size):</span>
+	<span class="s0"># Setup for mesh</span>
+	<span class="s1">c_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;E&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;S&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s2">, </span><span class="s3">&quot;W&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s1">m_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s1">i_phy_map = {</span><span class="s3">&quot;N&quot; </span><span class="s1">: </span><span class="s4">0</span><span class="s1">}</span>
+	<span class="s0"># Create some concentrated mesh topologies:</span>
+	<span class="s1">names = []</span>
+	<span class="s1">scales = []</span>
+	<span class="s0"># Iterate through scales</span>
+	<span class="s2">for </span><span class="s1">x </span><span class="s2">in </span><span class="s1">range(</span><span class="s4">1</span><span class="s2">,</span><span class="s1">int(max_size / </span><span class="s4">2</span><span class="s1">) + </span><span class="s4">1</span><span class="s1">):</span>
+		<span class="s1">name = </span><span class="s3">&quot;cmesh_%dx%d&quot; </span><span class="s1">% (</span><span class="s4">2</span><span class="s1">*x</span><span class="s2">,</span><span class="s4">2</span><span class="s1">*x)</span>
+		<span class="s1">names.append(name)</span>
+		<span class="s1">scales.append(</span><span class="s4">2</span><span class="s1">*x)</span>
+		<span class="s1">(placement</span><span class="s2">, </span><span class="s1">topology) = dgen.generate_concentrated_mesh(x</span><span class="s2">, </span><span class="s1">x</span><span class="s2">, </span><span class="s4">4</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s3">&quot;compute_chiplet_1phy&quot;</span><span class="s2">, </span><span class="s1">c_phy_map</span><span class="s2">, </span><span class="s3">&quot;memory_chiplet_square&quot;</span><span class="s2">, </span><span class="s1">m_phy_map</span><span class="s2">, </span><span class="s3">&quot;io_chiplet_square&quot;</span><span class="s2">, </span><span class="s1">i_phy_map)</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">placement)</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">topology)</span>
+		<span class="s1">design = {</span>
+			<span class="s3">&quot;technology_nodes_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/technology_nodes/example_technologies.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;chiplets_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/chiplets/example_chiplets.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;chiplet_placement_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/chiplet_placements/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+			<span class="s3">&quot;ici_topology_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/ici_topologies/%s.json&quot; </span><span class="s1">% name</span><span class="s2">,</span>
+			<span class="s3">&quot;packaging_file&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/packaging/example_packaging_active.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;thermal_config&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/thermal_config/example_thermal_config.json&quot;</span><span class="s2">,</span>
+			<span class="s3">&quot;booksim_config&quot; </span><span class="s1">: </span><span class="s3">&quot;inputs/booksim_config/example_booksim_config.json&quot;</span>
+		<span class="s1">}</span>
+		<span class="s1">hlp.write_file(</span><span class="s3">&quot;inputs/designs/%s.json&quot; </span><span class="s1">% name</span><span class="s2">, </span><span class="s1">design)</span>
+	<span class="s2">return </span><span class="s1">list(zip(names</span><span class="s2">, </span><span class="s1">scales))</span>
+
+<span class="s2">def </span><span class="s1">reproduce_results_from_paper(reps</span><span class="s2">, </span><span class="s1">max_size):</span>
+	<span class="s0"># Read the chiplets file</span>
+	<span class="s1">chiplets = hlp.read_file(</span><span class="s3">&quot;inputs/chiplets/example_chiplets.json&quot;</span><span class="s1">)</span>
+	<span class="s1">generate_mesh_designs_any_shape(chiplets</span><span class="s2">,</span><span class="s4">1</span><span class="s2">,</span><span class="s4">2</span><span class="s1">)</span>
+	<span class="s0"># # Generate designs</span>
+	<span class="s0"># designs_mesh = generate_mesh_designs(chiplets, max_size)</span>
+	<span class="s0"># designs_cmesh = generate_cmesh_designs(chiplets, max_size)</span>
+	<span class="s0"># designs = designs_mesh + designs_cmesh</span>
+	<span class="s0"># # Evaluate all designs using RapidChiplet</span>
+	<span class="s0"># for (design, scale) in designs_mesh + designs_cmesh:</span>
+	<span class="s0">#   print(&quot;Evaluating %s using RapidChiplet&quot; % design)</span>
+	<span class="s0">#   design_path = &quot;inputs/designs/%s.json&quot; % design</span>
+	<span class="s0">#   for rep in range(reps):</span>
+	<span class="s0">#       result_file = design + &quot;_&quot; + str(rep)</span>
+	<span class="s0">#       start_time = time.time()</span>
+	<span class="s0">#       out = subprocess.check_output([&quot;python&quot;, &quot;rapid_chiplet.py&quot;, &quot;-df&quot;, design_path, &quot;-rf&quot;, result_file, &quot;-as&quot;, &quot;-ps&quot;, &quot;-ls&quot;, &quot;-as&quot;, &quot;-c&quot;, &quot;-l&quot;, &quot;-t&quot;])</span>
+	<span class="s0">#       print(&quot;Time taken: %.6f seconds&quot; % (time.time() - start_time))</span>
+	<span class="s0"># # Evaluate all designs using BookSim.</span>
+	<span class="s0"># for traffic in [&quot;C2C&quot;,&quot;C2M&quot;,&quot;C2I&quot;,&quot;M2I&quot;]:</span>
+	<span class="s0">#   for (design, scale) in designs:</span>
+	<span class="s0">#       print(&quot;Evaluating %s using BookSim with %s traffic&quot; % (design, traffic))</span>
+	<span class="s0">#       booksim_config = hlp.read_file(&quot;inputs/booksim_config/example_booksim_config.json&quot;)</span>
+	<span class="s0">#       booksim_config[&quot;traffic&quot;] = traffic</span>
+	<span class="s0">#       booksim_config[&quot;sample_period&quot;] = int(500 + (4500 / 14 * (scale-2)))</span>
+	<span class="s0">#       hlp.write_file(&quot;inputs/booksim_config/example_booksim_config.json&quot;,booksim_config)</span>
+	<span class="s0">#       design_path = &quot;inputs/designs/%s.json&quot; % design</span>
+	<span class="s0">#       result_file = &quot;sim_&quot; + design + &quot;_&quot; + traffic</span>
+	<span class="s0">#       start_time = time.time()</span>
+	<span class="s0">#       out = subprocess.check_output([&quot;python&quot;, &quot;run_booksim_simulation.py&quot;, &quot;-df&quot;, design_path, &quot;-rf&quot;, result_file])</span>
+	<span class="s0">#       print(&quot;Time taken: %.6f seconds&quot; % (time.time() - start_time))</span>
+	<span class="s0"># # Create plots</span>
+	<span class="s0"># plots.reproduce_plots_from_paper(reps, max_size)</span>
+
+<span class="s0"># Use 10 repetitions and a maximum size of 16x16 compute-chiplets.</span>
+
+<span class="s1">reproduce_results_from_paper(</span><span class="s4">1</span><span class="s2">, </span><span class="s4">2</span><span class="s1">)</span>
+
+
+</pre>
+</body>
+</html>

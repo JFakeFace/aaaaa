@@ -1,0 +1,256 @@
+<html>
+<head>
+<title>validation.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #808080;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #cc7832;}
+.s3 { color: #6897bb;}
+.s4 { color: #6a8759;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+validation.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># Import python libraries</span>
+<span class="s2">import </span><span class="s1">os</span>
+<span class="s2">import </span><span class="s1">sys</span>
+<span class="s2">import </span><span class="s1">copy</span>
+<span class="s2">import </span><span class="s1">math</span>
+<span class="s2">import </span><span class="s1">argparse</span>
+
+<span class="s0"># Import RapidChiplet files</span>
+<span class="s2">import </span><span class="s1">helpers </span><span class="s2">as </span><span class="s1">hlp</span>
+
+<span class="s2">def </span><span class="s1">validate_design(design</span><span class="s2">, </span><span class="s1">technology = </span><span class="s2">None, </span><span class="s1">chiplets = </span><span class="s2">None, </span><span class="s1">placement = </span><span class="s2">None, </span><span class="s1">topology = </span><span class="s2">None, </span><span class="s1">packaging = </span><span class="s2">None, </span><span class="s1">thermal_config = </span><span class="s2">None, </span><span class="s1">booksim_config = </span><span class="s2">None</span><span class="s1">):</span>
+	<span class="s1">errors = </span><span class="s3">0</span>
+	<span class="s0"># Validate the technology_nodes-file</span>
+	<span class="s2">if </span><span class="s1">technology != </span><span class="s2">None</span><span class="s1">:</span>
+		<span class="s2">for </span><span class="s1">(tech_name</span><span class="s2">, </span><span class="s1">tech) </span><span class="s2">in </span><span class="s1">technology.items():</span>
+			<span class="s0"># The PHY latency must be positive</span>
+			<span class="s2">if </span><span class="s1">tech[</span><span class="s4">&quot;phy_latency&quot;</span><span class="s1">] &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid PHY latency </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be positive.&quot; </span><span class="s1">% (tech[</span><span class="s4">&quot;phy_latency&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">tech_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># The wafer radius must be positive</span>
+			<span class="s2">if </span><span class="s1">tech[</span><span class="s4">&quot;wafer_radius&quot;</span><span class="s1">] &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid wafer radius </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be positive.&quot; </span><span class="s1">% (tech[</span><span class="s4">&quot;wafer_radius&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">tech_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># The wafer cost must be non-negative</span>
+			<span class="s2">if </span><span class="s1">tech[</span><span class="s4">&quot;wafer_cost&quot;</span><span class="s1">] &lt; </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid wafer cost </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be non-negative.&quot; </span><span class="s1">% (tech[</span><span class="s4">&quot;wafer_cost&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">tech_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># The defect density needs to be between 0.0 and 1.0</span>
+			<span class="s2">if </span><span class="s1">tech [</span><span class="s4">&quot;defect_density&quot;</span><span class="s1">] &lt; </span><span class="s3">0.0 </span><span class="s2">or </span><span class="s1">tech[</span><span class="s4">&quot;defect_density&quot;</span><span class="s1">] &gt; </span><span class="s3">1.0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid defect density </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be between 0.0 and 1.0.&quot; </span><span class="s1">% (tech[</span><span class="s4">&quot;defect_density&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">tech_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+	<span class="s0"># Validate the chiplets-file</span>
+	<span class="s2">if </span><span class="s1">chiplets != </span><span class="s2">None</span><span class="s1">:</span>
+		<span class="s2">if </span><span class="s1">technology == </span><span class="s2">None</span><span class="s1">:</span>
+			<span class="s1">technology = hlp.read_file(filename = design[</span><span class="s4">&quot;technology_nodes_file&quot;</span><span class="s1">])</span>
+		<span class="s2">for </span><span class="s1">(chiplet_name</span><span class="s2">, </span><span class="s1">chiplet) </span><span class="s2">in </span><span class="s1">chiplets.items():</span>
+			<span class="s0"># Dimensions must be larger than zero</span>
+			<span class="s2">if </span><span class="s1">min(chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]) &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid dimensions </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of chiplet </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, dimensions must be positive.&quot; </span><span class="s1">% (str(chiplet[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">])</span><span class="s2">, </span><span class="s1">chiplet_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># Type bust be compute, memory, or io</span>
+			<span class="s2">if </span><span class="s1">chiplet[</span><span class="s4">&quot;type&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">[</span><span class="s4">&quot;compute&quot;</span><span class="s2">,</span><span class="s4">&quot;memory&quot;</span><span class="s2">,</span><span class="s4">&quot;io&quot;</span><span class="s1">]:	</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Chiplet </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">has an invalid type: </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">(only </span><span class="s2">\&quot;</span><span class="s4">compute</span><span class="s2">\&quot;</span><span class="s4">, </span><span class="s2">\&quot;</span><span class="s4">memory</span><span class="s2">\&quot;</span><span class="s4">, or </span><span class="s2">\&quot;</span><span class="s4">io</span><span class="s2">\&quot; </span><span class="s4">are allowed.)&quot; </span><span class="s1">% (chiplet_name</span><span class="s2">, </span><span class="s1">chiplet[</span><span class="s4">&quot;type&quot;</span><span class="s1">]))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># Technology node must be present in technology nodes file</span>
+			<span class="s2">if </span><span class="s1">chiplet[</span><span class="s4">&quot;technology&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">technology:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: The technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">used in chiplet </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">has not been specified in the technology file&quot; </span><span class="s1">% (chiplet[</span><span class="s4">&quot;technology&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># The internal latency must be positive</span>
+			<span class="s2">if </span><span class="s1">chiplet[</span><span class="s4">&quot;internal_latency&quot;</span><span class="s1">] &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid relay latency </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of chiplet </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be positive. If not used, set to NaN.&quot; </span><span class="s1">% (chiplet[</span><span class="s4">&quot;internal_latency&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># The unit count must be an integer and at least 1</span>
+			<span class="s2">if </span><span class="s1">chiplet[</span><span class="s4">&quot;unit_count&quot;</span><span class="s1">] % </span><span class="s3">1 </span><span class="s1">!= </span><span class="s3">0 </span><span class="s2">or </span><span class="s1">chiplet[</span><span class="s4">&quot;unit_count&quot;</span><span class="s1">] &lt; </span><span class="s3">1</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid unit count </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">of chiplet </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, this parameter must be an integer and at least 1.&quot; </span><span class="s1">% (chiplet[</span><span class="s4">&quot;unit_count&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_name))</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+	<span class="s0"># Validate the chiplet_placement-file: Chiplets need to be non-overlapping</span>
+	<span class="s0"># Check all pairs of chiplets</span>
+	<span class="s2">if </span><span class="s1">placement != </span><span class="s2">None</span><span class="s1">:</span>
+		<span class="s2">if </span><span class="s1">chiplets == </span><span class="s2">None</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: validating the placement-file requires the corresponding chiplets-file -&gt; reading chiplets file.&quot;</span><span class="s1">)</span>
+			<span class="s1">chiplets = hlp.read_file(filename = design[</span><span class="s4">&quot;chiplets_file&quot;</span><span class="s1">])</span>
+		<span class="s2">for </span><span class="s1">c1 </span><span class="s2">in </span><span class="s1">range(len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])-</span><span class="s3">1</span><span class="s1">):</span>
+			<span class="s1">chiplet_desc_1 = placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][c1]</span>
+			<span class="s1">chiplet_1 = chiplets[chiplet_desc_1[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+			<span class="s0"># Rotate the chiplet if needed</span>
+			<span class="s1">chiplet_1 = hlp.rotate_chiplet(chiplet_1</span><span class="s2">, </span><span class="s1">chiplet_desc_1[</span><span class="s4">&quot;rotation&quot;</span><span class="s1">])</span>
+			<span class="s0"># Extract info</span>
+			<span class="s1">(x1</span><span class="s2">,</span><span class="s1">y1) = (chiplet_desc_1[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_desc_1[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])		</span><span class="s0"># x and y position</span>
+			<span class="s1">(w1</span><span class="s2">,</span><span class="s1">h1) = (chiplet_1[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_1[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])				</span><span class="s0"># with and height</span>
+			<span class="s1">(l1</span><span class="s2">,</span><span class="s1">r1</span><span class="s2">,</span><span class="s1">t1</span><span class="s2">,</span><span class="s1">b1) = (x1</span><span class="s2">, </span><span class="s1">x1 + w1</span><span class="s2">, </span><span class="s1">y1</span><span class="s2">, </span><span class="s1">y1 + h1)											</span><span class="s0"># left, right, top, bottom</span>
+			<span class="s2">for </span><span class="s1">c2 </span><span class="s2">in </span><span class="s1">range(c1+</span><span class="s3">1</span><span class="s2">, </span><span class="s1">len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])):</span>
+				<span class="s1">chiplet_desc_2 = placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][c2]</span>
+				<span class="s1">chiplet_2 = chiplets[chiplet_desc_1[</span><span class="s4">&quot;name&quot;</span><span class="s1">]]</span>
+				<span class="s0"># Rotate the chiplet if needed</span>
+				<span class="s1">chiplet_2 = hlp.rotate_chiplet(chiplet_2</span><span class="s2">, </span><span class="s1">chiplet_desc_2[</span><span class="s4">&quot;rotation&quot;</span><span class="s1">])</span>
+				<span class="s0"># Extract info</span>
+				<span class="s1">(x2</span><span class="s2">,</span><span class="s1">y2) = (chiplet_desc_2[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_desc_2[</span><span class="s4">&quot;position&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">])	</span><span class="s0"># x and y position</span>
+				<span class="s1">(w2</span><span class="s2">,</span><span class="s1">h2) = (chiplet_2[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;x&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">chiplet_2[</span><span class="s4">&quot;dimensions&quot;</span><span class="s1">][</span><span class="s4">&quot;y&quot;</span><span class="s1">]) 			</span><span class="s0"># with and height</span>
+				<span class="s1">(l2</span><span class="s2">,</span><span class="s1">r2</span><span class="s2">,</span><span class="s1">t2</span><span class="s2">,</span><span class="s1">b2) = (x2</span><span class="s2">, </span><span class="s1">x2 + w2</span><span class="s2">, </span><span class="s1">y2</span><span class="s2">, </span><span class="s1">y2 + h2)										</span><span class="s0"># left, right, top, bottom</span>
+				<span class="s0"># Check for overlap</span>
+				<span class="s2">if not </span><span class="s1">((r1 &lt;= l2) </span><span class="s2">or </span><span class="s1">(r2 &lt;= l1) </span><span class="s2">or </span><span class="s1">(t1 &lt;= b2) </span><span class="s2">or </span><span class="s1">(t2 &lt;= b1)):</span>
+					<span class="s1">print(</span><span class="s4">&quot;validation error: Chiplets %d and %d are overlapping&quot; </span><span class="s1">% (c1</span><span class="s2">, </span><span class="s1">c2))</span>
+					<span class="s1">errors += </span><span class="s3">1</span>
+	<span class="s0"># Validate the topology: Check that only valid chiplets/phys or interposer-routers/ports are referenced and that each port is referenced only once</span>
+	<span class="s2">if </span><span class="s1">topology != </span><span class="s2">None</span><span class="s1">:</span>
+		<span class="s2">if </span><span class="s1">chiplets == </span><span class="s2">None</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: validating the topology-file requires the corresponding chiplets-file -&gt; reading chiplets file.&quot;</span><span class="s1">)</span>
+			<span class="s1">chiplets = hlp.read_file(filename = design[</span><span class="s4">&quot;chiplets_file&quot;</span><span class="s1">])</span>
+		<span class="s2">if </span><span class="s1">placement == </span><span class="s2">None</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: validating the topology-file requires the corresponding placement-file -&gt; reading placement file.&quot;</span><span class="s1">)</span>
+			<span class="s1">placement = hlp.read_file(filename = design[</span><span class="s4">&quot;chiplet_placement_file&quot;</span><span class="s1">])</span>
+		<span class="s1">used_phys = []</span>
+		<span class="s1">used_ports = []</span>
+		<span class="s2">for </span><span class="s1">(lid</span><span class="s2">, </span><span class="s1">link) </span><span class="s2">in </span><span class="s1">enumerate(topology):</span>
+			<span class="s1">endpoints = [link[</span><span class="s4">&quot;ep1&quot;</span><span class="s1">]</span><span class="s2">,</span><span class="s1">link[</span><span class="s4">&quot;ep2&quot;</span><span class="s1">]]</span>
+			<span class="s2">for </span><span class="s1">ep </span><span class="s2">in </span><span class="s1">endpoints:</span>
+				<span class="s2">if </span><span class="s1">ep[</span><span class="s4">&quot;type&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">[</span><span class="s4">&quot;chiplet&quot;</span><span class="s2">,</span><span class="s4">&quot;irouter&quot;</span><span class="s1">]:</span>
+					<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid link-endpoint type </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">for link %d. The endpoint type must be </span><span class="s2">\&quot;</span><span class="s4">chiplet</span><span class="s2">\&quot; </span><span class="s4">or </span><span class="s2">\&quot;</span><span class="s4">irouter</span><span class="s2">\&quot;</span><span class="s4">.&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;type&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid))</span>
+					<span class="s1">errors += </span><span class="s3">1</span>
+				<span class="s2">if </span><span class="s1">ep[</span><span class="s4">&quot;type&quot;</span><span class="s1">] == </span><span class="s4">&quot;chiplet&quot;</span><span class="s1">:</span>
+					<span class="s0"># Check that the chiplet-id is valid</span>
+					<span class="s2">if </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">] &gt;= len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">]):</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid chiplet-id </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">for link %d. There are only %d chiplets.&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid</span><span class="s2">, </span><span class="s1">len(placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">])))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Check that the PHY-id is valid</span>
+					<span class="s2">elif </span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">] &gt;= len(chiplets[placement[</span><span class="s4">&quot;chiplets&quot;</span><span class="s1">][ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]][</span><span class="s4">&quot;name&quot;</span><span class="s1">]][</span><span class="s4">&quot;phys&quot;</span><span class="s1">]):</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid PHY-id </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">for link %d. There are not that many PHYS in the chiplet with id %s.&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid</span><span class="s2">, </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Check that each PHY is only used once</span>
+					<span class="s2">elif </span><span class="s1">(ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">,</span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]) </span><span class="s2">in </span><span class="s1">used_phys:</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: The PHY number %s of the chiplet with id %s is used multiple times (in link %d).&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Remember that this PHY has been used</span>
+					<span class="s2">else</span><span class="s1">:</span>
+						<span class="s1">used_phys.append((ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">,</span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]))</span>
+				<span class="s2">if </span><span class="s1">ep[</span><span class="s4">&quot;type&quot;</span><span class="s1">] == </span><span class="s4">&quot;irouter&quot;</span><span class="s1">:</span>
+					<span class="s0"># Check that the interposer-router-id is valid</span>
+					<span class="s2">if </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">] &gt;= len(placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">]):</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid interposer-router-id </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">for link %d. There are only %d interposer-routers.&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid</span><span class="s2">, </span><span class="s1">len(placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">])))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Check that the port-id is valid</span>
+					<span class="s2">elif </span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">] &gt;= placement[</span><span class="s4">&quot;interposer_routers&quot;</span><span class="s1">][ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]][</span><span class="s4">&quot;ports&quot;</span><span class="s1">]:</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid port-id </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">for link %d. There are not that many ports in the interposer-router with id %s.&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid</span><span class="s2">, </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Check that each port is only used once</span>
+					<span class="s2">elif </span><span class="s1">(ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">,</span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]) </span><span class="s2">in </span><span class="s1">used_ports:</span>
+						<span class="s1">print(</span><span class="s4">&quot;validation error: The port number %s of the interposer-router with id %s is used multiple times (in link %d).&quot; </span><span class="s1">% (ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">, </span><span class="s1">lid))</span>
+						<span class="s1">errors += </span><span class="s3">1</span>
+					<span class="s0"># Remember that this PHY has been used</span>
+					<span class="s2">else</span><span class="s1">:</span>
+						<span class="s1">used_ports.append((ep[</span><span class="s4">&quot;outer_id&quot;</span><span class="s1">]</span><span class="s2">,</span><span class="s1">ep[</span><span class="s4">&quot;inner_id&quot;</span><span class="s1">]))</span>
+	<span class="s0"># Validate the packaging: </span>
+	<span class="s0"># Link routing must be manhattan or eucledian</span>
+	<span class="s2">if </span><span class="s1">packaging != </span><span class="s2">None</span><span class="s1">:</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_routing&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">[</span><span class="s4">&quot;manhattan&quot;</span><span class="s2">, </span><span class="s4">&quot;euclidean&quot;</span><span class="s1">]:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid link routing </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, only </span><span class="s2">\&quot;</span><span class="s4">manhattan</span><span class="s2">\&quot; </span><span class="s4">and </span><span class="s2">\&quot;</span><span class="s4">euclidean</span><span class="s2">\&quot; </span><span class="s4">are allowed.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;link_routing&quot;</span><span class="s1">])</span>
+			<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">[</span><span class="s4">&quot;constant&quot;</span><span class="s2">, </span><span class="s4">&quot;function&quot;</span><span class="s1">]:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid link latency type </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">, only </span><span class="s2">\&quot;</span><span class="s4">constant</span><span class="s2">\&quot; </span><span class="s4">and </span><span class="s2">\&quot;</span><span class="s4">function</span><span class="s2">\&quot; </span><span class="s4">are allowed.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">])</span>
+			<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s4">&quot;constant&quot;</span><span class="s1">:</span>
+			<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">] &lt; </span><span class="s3">1 </span><span class="s2">or </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">] % </span><span class="s3">1 </span><span class="s1">!= </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid link latency </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">. This parameter must be an integer larger than 0&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">])</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;link_latency_type&quot;</span><span class="s1">] == </span><span class="s4">&quot;function&quot;</span><span class="s1">:</span>
+			<span class="s2">try</span><span class="s1">:</span>
+				<span class="s1">tmp = int(math.ceil(eval(packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">])(</span><span class="s3">3</span><span class="s1">)))</span>
+			<span class="s2">except</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid link latency function </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">. Unable to evaluate function.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;link_latency&quot;</span><span class="s1">])</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s0"># The packaging yield must be between 0.0 and 1.0</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;packaging_yield&quot;</span><span class="s1">] &lt; </span><span class="s3">0.0 </span><span class="s2">or </span><span class="s1">packaging[</span><span class="s4">&quot;packaging_yield&quot;</span><span class="s1">] &gt; </span><span class="s3">1.0</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid packaging yield </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">. This parameter must be between 0.0 and 1.0.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;packaging_yield&quot;</span><span class="s1">])</span>
+			<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s0"># Check that active interposers contain the required information</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;is_active&quot;</span><span class="s1">]:</span>
+			<span class="s0"># Validate interposer-router latency: Must be present and non-negative</span>
+			<span class="s2">if </span><span class="s4">&quot;latency_irouter&quot; </span><span class="s2">not in </span><span class="s1">packaging:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Active interposers must specify the parameter </span><span class="s2">\&quot;</span><span class="s4">latency_iroute</span><span class="s2">\&quot;</span><span class="s4">&quot;</span><span class="s1">)</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s2">elif </span><span class="s1">packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">] &lt; </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid interposer-router latency </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">. This parameter must not be negative.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;latency_irouter&quot;</span><span class="s1">])</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s0"># Validate interposer-router power consumption: Must be present and non-negative</span>
+			<span class="s2">if </span><span class="s4">&quot;power_irouter&quot; </span><span class="s2">not in </span><span class="s1">packaging:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Active interposers must specify the parameter </span><span class="s2">\&quot;</span><span class="s4">power_irouter</span><span class="s2">\&quot;</span><span class="s4">&quot;</span><span class="s1">)</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s2">elif </span><span class="s1">packaging[</span><span class="s4">&quot;power_irouter&quot;</span><span class="s1">] &lt; </span><span class="s3">0</span><span class="s1">:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Invalid interposer-router power consumption </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot;</span><span class="s4">. This parameter must not be negative.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;power_irouter&quot;</span><span class="s1">])</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+		<span class="s0"># Check that interposers contain the required information</span>
+		<span class="s2">if </span><span class="s1">packaging[</span><span class="s4">&quot;has_interposer&quot;</span><span class="s1">]:</span>
+			<span class="s0"># The wafer radius must be positive</span>
+			<span class="s2">if </span><span class="s4">&quot;interposer_technology&quot; </span><span class="s2">not in </span><span class="s1">packaging:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Packages with interposers must specify the parameter </span><span class="s2">\&quot;</span><span class="s4">interposer_technology</span><span class="s2">\&quot;</span><span class="s4">&quot;</span><span class="s1">)</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+			<span class="s2">elif </span><span class="s1">packaging[</span><span class="s4">&quot;interposer_technology&quot;</span><span class="s1">] </span><span class="s2">not in </span><span class="s1">technology:</span>
+				<span class="s1">print(</span><span class="s4">&quot;validation error: Interposer Technology </span><span class="s2">\&quot;</span><span class="s4">%s</span><span class="s2">\&quot; </span><span class="s4">not found in technology-file.&quot; </span><span class="s1">% packaging[</span><span class="s4">&quot;interposer_technology&quot;</span><span class="s1">])</span>
+				<span class="s1">errors += </span><span class="s3">1</span>
+	<span class="s2">if </span><span class="s1">thermal_config != </span><span class="s2">None</span><span class="s1">:	</span>
+	<span class="s0"># The parameter k_t must be below 0.25, otherwise the thermal simulation is unstable</span>
+		<span class="s2">if </span><span class="s1">thermal_config[</span><span class="s4">&quot;k_t&quot;</span><span class="s1">] &gt;= </span><span class="s3">0.25</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: The parameter k_t in the thermal config must be below 0.25, otherwise, the simulation is unstable.&quot;</span><span class="s1">)</span>
+			<span class="s1">errors += </span><span class="s3">1</span>
+	<span class="s0"># Return true if the design is valid and false otherwise</span>
+	<span class="s2">return </span><span class="s1">errors == </span><span class="s3">0</span>
+
+<span class="s2">def </span><span class="s1">validate_ici_graph(ici_graph):</span>
+	<span class="s1">(c</span><span class="s2">, </span><span class="s1">r</span><span class="s2">, </span><span class="s1">n</span><span class="s2">, </span><span class="s1">neighbors</span><span class="s2">, </span><span class="s1">relay_map</span><span class="s2">, </span><span class="s1">nodes_by_type</span><span class="s2">,</span><span class="s1">phy_neighbors) = ici_graph</span>
+	<span class="s0"># Check for unconnected chiplets or irouters</span>
+	<span class="s2">for </span><span class="s1">node </span><span class="s2">in </span><span class="s1">range(n):</span>
+		<span class="s2">if </span><span class="s1">len(neighbors[node]) == </span><span class="s3">0</span><span class="s1">:</span>
+			<span class="s1">print(</span><span class="s4">&quot;validation error: Node %d is not connected.&quot; </span><span class="s1">% node)</span>
+	<span class="s0"># Check for a fully connected topology: Run BFS</span>
+	<span class="s1">cur = </span><span class="s3">0</span>
+	<span class="s1">todo = [cur]	</span>
+	<span class="s1">visited_count = </span><span class="s3">0</span>
+	<span class="s1">visited = [</span><span class="s2">False for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+	<span class="s1">discovered = [</span><span class="s2">False for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n)]</span>
+	<span class="s1">discovered[</span><span class="s3">0</span><span class="s1">] = </span><span class="s2">True</span>
+	<span class="s2">while </span><span class="s1">len(todo) &gt; </span><span class="s3">0 </span><span class="s2">and </span><span class="s1">visited_count &lt; n:</span>
+		<span class="s1">cur = todo.pop(</span><span class="s3">0</span><span class="s1">)</span>
+		<span class="s2">if </span><span class="s1">visited[cur]:</span>
+			<span class="s1">print(</span><span class="s4">&quot;ERROR: This is a bug in the BFS implementation of the ici-graph validation function.&quot;</span><span class="s1">)</span>
+			<span class="s2">continue</span>
+		<span class="s1">visited[cur] = </span><span class="s2">True</span>
+		<span class="s1">visited_count += </span><span class="s3">1</span>
+		<span class="s2">for </span><span class="s1">nei </span><span class="s2">in </span><span class="s1">neighbors[cur]:</span>
+			<span class="s2">if </span><span class="s1">(</span><span class="s2">not </span><span class="s1">visited[nei]) </span><span class="s2">and </span><span class="s1">(</span><span class="s2">not </span><span class="s1">discovered[nei]):</span>
+				<span class="s1">todo.append(nei)</span>
+				<span class="s1">discovered[nei] = </span><span class="s2">True</span>
+	<span class="s2">if </span><span class="s1">visited_count != n:</span>
+		<span class="s1">print(</span><span class="s4">&quot;validation error: The topology is not fully connected.&quot;</span><span class="s1">)</span>
+		<span class="s2">return False</span>
+	<span class="s2">else</span><span class="s1">:</span>
+		<span class="s2">return True</span>
+
+<span class="s2">if </span><span class="s1">__name__ == </span><span class="s4">&quot;__main__&quot;</span><span class="s1">:</span>
+	<span class="s0"># Read command line arguments</span>
+	<span class="s1">parser = argparse.ArgumentParser()	</span>
+	<span class="s1">parser.add_argument(</span><span class="s4">&quot;-df&quot;</span><span class="s2">, </span><span class="s4">&quot;--design_file&quot;</span><span class="s2">, </span><span class="s1">required = </span><span class="s2">True, </span><span class="s1">help = </span><span class="s4">&quot;Path to the </span><span class="s2">\&quot;</span><span class="s4">design</span><span class="s2">\&quot; </span><span class="s4">input file&quot;</span><span class="s1">) </span>
+	<span class="s1">args = parser.parse_args()</span>
+	<span class="s0"># Read the design file</span>
+	<span class="s1">design = hlp.read_file(filename = args.design_file)</span>
+	<span class="s0"># Read the remaining files</span>
+	<span class="s1">technology = hlp.read_file(filename = design[</span><span class="s4">&quot;technology_nodes_file&quot;</span><span class="s1">])</span>
+	<span class="s1">chiplets = hlp.read_file(filename = design[</span><span class="s4">&quot;chiplets_file&quot;</span><span class="s1">])</span>
+	<span class="s1">placement = hlp.read_file(filename = design[</span><span class="s4">&quot;chiplet_placement_file&quot;</span><span class="s1">])</span>
+	<span class="s1">topology = hlp.read_file(filename = design[</span><span class="s4">&quot;ici_topology_file&quot;</span><span class="s1">])</span>
+	<span class="s1">packaging = hlp.read_file(filename = design[</span><span class="s4">&quot;packaging_file&quot;</span><span class="s1">])</span>
+	<span class="s1">thermal_config = hlp.read_file(filename = design[</span><span class="s4">&quot;thermal_config&quot;</span><span class="s1">])</span>
+	<span class="s0"># Validate the design</span>
+	<span class="s1">validate_design(design</span><span class="s2">, </span><span class="s1">technology</span><span class="s2">, </span><span class="s1">chiplets</span><span class="s2">, </span><span class="s1">placement</span><span class="s2">, </span><span class="s1">topology</span><span class="s2">, </span><span class="s1">packaging</span><span class="s2">, </span><span class="s1">thermal_config)</span>
+
+</pre>
+</body>
+</html>
