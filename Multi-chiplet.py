@@ -981,7 +981,11 @@ def compute_metrics(design, routing, data_size,timing,name_of_design,topology_pa
     print("Function Simulation Cycles: %d" % cycle_fun)
     print("Timing Simulation Time: %.2f seconds" % time_timing)
     print("Timing Simulation Cycles: %d" % cycle_timing)
-    plot_simulation_comparison(time_fun, time_timing, cycle_fun, cycle_timing)
+    with open('simulation_results.txt', 'w') as file:
+        file.write("Function Simulation Time: %.2f seconds\n" % time_fun)
+        file.write("Function Simulation Cycles: %d\n" % cycle_fun)
+        file.write("Timing Simulation Time: %.2f seconds\n" % time_timing)
+        file.write("Timing Simulation Cycles: %d\n" % cycle_timing)
     
     
     
